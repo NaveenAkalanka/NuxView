@@ -1,0 +1,185 @@
+#!/bin/bash
+# NuxView CLI
+
+# Detect installation location
+if [ -d "/opt/nuxview" ]; then
+    INSTALL_ROOT="/opt/nuxview"
+else
+    INSTALL_ROOT="$HOME/.nuxview"
+fi
+
+APP_DIR="$INSTALL_ROOT/app"
+VENV="$INSTALL_ROOT/venv"
+
+# User-specific data (always in home)
+DATA_ROOT="$HOME/.nuxview"
+PID_FILE="$DATA_ROOT/nuxview.pid"
+LOG_DIR="$DATA_ROOT/logs"
+LOG_FILE="$LOG_DIR/nuxview.log"
+API_URL="http://127.0.0.1:4897"
+
+command="$1"
+shift
+
+ensure_dirs() {
+    if [ ! -d "$DATA_ROOT" ]; then
+        mkdir -p "$DATA_ROOT"
+        mkdir -p "$LOG_DIR"
+        mkdir -p "$DATA_ROOT/data"
+    fi
+}
+
+ensure_installed() {
+    if [ ! -d "$APP_DIR" ]; then
+        echo "Error: NuxView is not installed properly."
+        echo "Checked: $APP_DIR"
+        exit 1
+    fi
+}
+
+case "$command" in
+    start)
+        ensure_installed
+        ensure_dirs
+        
+        if [ -f "$PID_FILE" ]; then
+            pid=$(cat "$PID_FILE")
+            if kill -0 "$pid" 2>/dev/null; then
+                echo "NuxView is already running (PID $pid)"
+                exit 0
+            fi
+        fi
+        
+        # Parse args
+        HOST="127.0.0.1"
+        PORT="4897"
+        while [[ "$#" -gt 0 ]]; do
+            case $1 in
+                --host) HOST="$2"; shift ;;
+                --port) PORT="$2"; shift ;;
+                *) echo "Unknown parameter: $1"; exit 1 ;;
+            esac
+            shift
+        done
+        
+        echo "Starting NuxView on $HOST:$PORT..."
+        cd "$APP_DIR/backend" || exit 1
+        
+        # Check venv
+        if [ ! -f "$VENV/bin/uvicorn" ]; then
+             echo "Error: Virtual environment not found at $VENV"
+             exit 1
+        fi
+
+        # Use nohup to detach
+        nohup "$VENV/bin/uvicorn" main:app --host "$HOST" --port "$PORT" > "$LOG_FILE" 2>&1 &
+        echo $! > "$PID_FILE"
+        echo "Started. PID: $(cat "$PID_FILE")"
+        if [ "$HOST" == "0.0.0.0" ]; then
+             IP=$(hostname -I | awk '{print $1}')
+             echo "Web UI: http://$IP:$PORT"
+        else
+             echo "Web UI: http://$HOST:$PORT"
+        fi
+        ;;
+        
+    stop)
+        if [ -f "$PID_FILE" ]; then
+            pid=$(cat "$PID_FILE")
+            kill "$pid" 2>/dev/null
+            rm "$PID_FILE"
+            echo "Stopped."
+        else
+            echo "Not running."
+        fi
+        ;;
+        
+    status)
+        if [ -f "$PID_FILE" ]; then
+            pid=$(cat "$PID_FILE")
+            if kill -0 "$pid" 2>/dev/null; then
+                 echo "Status: Running"
+                 echo "PID: $pid"
+                 echo "Install Path: $INSTALL_ROOT"
+                 echo "Logs: $LOG_FILE"
+                 curl -s -m 2 "$API_URL/api/health" && echo "" || echo " (API not responding)"
+            else
+                 echo "Status: Stale PID file. Cleaning up."
+                 rm "$PID_FILE"
+                 echo "Not running."
+            fi
+        else
+            echo "Status: Not running"
+        fi
+        ;;
+        
+    scan)
+        ensure_installed
+        PATH_ARG="$1"
+        shift
+        
+        if [ -z "$PATH_ARG" ]; then
+            echo "Usage: nuxview scan <path>"
+            exit 1
+        fi
+        
+        if [ ! -f "$PID_FILE" ]; then
+             echo "Error: NuxView must be running to scan. Run 'nuxview start'"
+             exit 1
+        fi
+        
+        echo "Requesting scan for $PATH_ARG..."
+        JSON_DATA=$(printf '{"path": "%s"}' "$PATH_ARG")
+        
+        RESPONSE=$(curl -s -X POST "$API_URL/api/scan" \
+             -H "Content-Type: application/json" \
+             -d "$JSON_DATA")
+        
+        echo "Server response:"
+        echo "$RESPONSE"
+        ;;
+        
+    uninstall)
+        echo "Uninstalling NuxView..."
+        "$0" stop 2>/dev/null
+        
+        # Remove User Data
+        echo "Removing user data ($DATA_ROOT)..."
+        rm -rf "$DATA_ROOT"
+        
+        # We can only remove system files if we have permission or if we are the user who installed it
+        if [ -w "$INSTALL_ROOT" ]; then
+             echo "Removing application files ($INSTALL_ROOT)..."
+             rm -rf "$INSTALL_ROOT"
+        else
+             echo "WARNING: Cannot remove $INSTALL_ROOT (permission denied). You may need sudo."
+        fi
+
+        SCRIPT_PATH=$(readlink -f "$0")
+        if [ -w "$SCRIPT_PATH" ]; then
+             echo "Removing binary ($SCRIPT_PATH)..."
+             rm "$SCRIPT_PATH"
+        elif [ -w "/usr/local/bin/nuxview" ]; then
+             rm "/usr/local/bin/nuxview"
+        elif [ -w "$HOME/.local/bin/nuxview" ]; then
+             rm "$HOME/.local/bin/nuxview"
+        else
+             echo "WARNING: Could not remove 'nuxview' binary. Permission denied."
+        fi
+        
+        echo "Uninstalled."
+        ;;
+        
+    install)
+        if [ -f "./install.sh" ]; then
+            ./install.sh
+        else
+            echo "Please run install.sh from the source directory."
+        fi
+        ;;
+        
+    *)
+        echo "Usage: nuxview {install|start|stop|status|scan|uninstall}"
+        exit 1
+        ;;
+esac
