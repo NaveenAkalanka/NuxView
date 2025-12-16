@@ -16,13 +16,12 @@ If you have pushed this repository to GitHub (or another git server), you can in
 **Prerequisites**: `git` and `python3` must be installed.
 
 ```bash
-# Replace 'YOUR_USER' with your GitHub username
-curl -sL https://raw.githubusercontent.com/YOUR_USER/NuxView/main/remote_install.sh | bash
+curl -sL https://raw.githubusercontent.com/NaveenAkalanka/NuxView/main/remote_install.sh | bash
 ```
 
 To install globally (for all users), run with sudo:
 ```bash
-curl -sL https://raw.githubusercontent.com/YOUR_USER/NuxView/main/remote_install.sh | sudo bash
+curl -sL https://raw.githubusercontent.com/NaveenAkalanka/NuxView/main/remote_install.sh | sudo bash
 ```
 
 **Important**: Ensure you have committed the built frontend (`frontend/dist`) to your repository, or the remote installer won't have the web UI assets.

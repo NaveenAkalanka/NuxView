@@ -2,7 +2,7 @@
 # Installation script for NuxView
 # Usage: curl -sL https://raw.githubusercontent.com/YOUR_USER/NuxView/main/remote_install.sh | bash
 
-REPO_URL="${NUXVIEW_REPO:-https://github.com/change-me/NuxView.git}"
+REPO_URL="${NUXVIEW_REPO:-https://github.com/NaveenAkalanka/NuxView.git}"
 BRANCH="${NUXVIEW_BRANCH:-main}"
 TEMP_DIR=$(mktemp -d)
 
