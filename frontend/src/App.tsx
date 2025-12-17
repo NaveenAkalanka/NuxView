@@ -1,33 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { getTree, scanPath } from './api';
 import type { FileNode } from './api';
-import { FileTree } from './components/FileTree';
-import { Search, RefreshCw, FolderSearch, AlertCircle } from 'lucide-react';
+import { VisualTree } from './components/VisualTree';
+import { RefreshCw, FolderSearch, AlertCircle } from 'lucide-react';
 import './index.css';
-
-const filterTree = (node: FileNode, query: string): FileNode | null => {
-  if (!query) return node;
-  const lowerQuery = query.toLowerCase();
-
-  let filteredChildren: FileNode[] = [];
-  if (node.children) {
-    filteredChildren = node.children
-      .map(c => filterTree(c, query))
-      .filter((c): c is FileNode => c !== null);
-  }
-
-  // If this node matches OR has matching children, return it (with filtered children)
-  if (node.name.toLowerCase().includes(lowerQuery) || filteredChildren.length > 0) {
-    return { ...node, children: filteredChildren };
-  }
-
-  return null;
-};
 
 function App() {
   const [tree, setTree] = useState<FileNode | null>(null);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
   const [inputPath, setInputPath] = useState('/home');
   const [error, setError] = useState<string | null>(null);
   const [lastScan, setLastScan] = useState<string | null>(null);
@@ -40,7 +20,6 @@ function App() {
     setLoading(true);
     try {
       const data = await getTree();
-      // If "No scan yet", data might default to empty or a wrapper
       if (data.path) {
         setTree(data);
         setInputPath(data.path);
@@ -48,7 +27,6 @@ function App() {
       setError(null);
     } catch (err: any) {
       console.error(err);
-      // Don't show error on first load, maybe backend just started fresh or no scan yet
     } finally {
       setLoading(false);
     }
@@ -59,6 +37,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
+      // Backend now defaults to deep scan (50 levels)
       const newTree = await scanPath(inputPath);
       setTree(newTree);
       setLastScan(new Date().toLocaleTimeString());
@@ -70,70 +49,50 @@ function App() {
     }
   };
 
-  const filteredTree = useMemo(() => {
-    if (!tree) return null;
-    return filterTree(tree, search);
-  }, [tree, search]);
-
   return (
-    <div className="container">
+    <div className="container" style={{ maxWidth: '100%', padding: '1rem', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div style={{ marginBottom: '2rem', marginTop: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 600, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <FolderSearch size={32} color="#38bdf8" />
-          NuxView
-        </h1>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          Linux Directory Explorer
-          {lastScan && <span> • Last scan: {lastScan}</span>}
-        </p>
-      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+            <FolderSearch size={24} color="#38bdf8" />
+            NuxView
+          </h1>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+            Interactive Graph {lastScan && `• Scanned: ${lastScan}`}
+          </span>
+        </div>
 
-      {/* Controls */}
-      <div className="card" style={{ marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1 }}>
-            <input
-              className="input"
-              value={inputPath}
-              onChange={e => setInputPath(e.target.value)}
-              placeholder="/path/to/scan"
-            />
-          </div>
-          <button className="btn" onClick={handleScan} disabled={loading} style={{ minWidth: '100px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <input
+            className="input"
+            value={inputPath}
+            onChange={e => setInputPath(e.target.value)}
+            placeholder="/path/to/scan"
+            style={{ minWidth: '300px' }}
+          />
+          <button className="btn" onClick={handleScan} disabled={loading}>
             <RefreshCw size={18} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
             {loading ? 'Scanning...' : 'Scan'}
           </button>
-        </div>
-
-        <div style={{ position: 'relative' }}>
-          <Search size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-          <input
-            className="input"
-            style={{ paddingLeft: '2.5rem' }}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Filter folders..."
-          />
         </div>
       </div>
 
       {/* Error */}
       {error && (
-        <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--danger)', color: '#fca5a5', borderRadius: '8px', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--danger)', color: '#fca5a5', borderRadius: '8px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <AlertCircle size={20} />
           {error}
         </div>
       )}
 
-      {/* Tree */}
-      <div className="card" style={{ minHeight: '400px', overflowX: 'auto', padding: '1rem' }}>
-        {filteredTree ? (
-          <FileTree node={filteredTree} forceOpen={search.length > 0} />
+      {/* Graph View */}
+      <div style={{ flex: 1, position: 'relative' }}>
+        {tree ? (
+          <VisualTree data={tree} />
         ) : (
-          <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '4rem 0' }}>
-            {tree ? 'No results matching filter.' : 'No directory scanned yet. Enter a path above to start.'}
+          <div className="card" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+            No directory scanned yet. Enter a path above to start visualizing.
           </div>
         )}
       </div>

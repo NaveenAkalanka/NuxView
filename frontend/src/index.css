@@ -142,7 +142,43 @@ body {
   text-overflow: ellipsis;
 }
 
-.tree-children {
-  margin-left: 0.8rem;
-  border-left: 1px solid var(--border-color);
+
+/* ReactFlow Nodes */
+.folder-node {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 200px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.folder-node:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+.folder-node-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.folder-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.9rem;
+}
+
+.folder-node-actions {
+  display: flex;
+  justify-content: flex-end;
+  height: 4px;
+  /* spacer for now */
 }

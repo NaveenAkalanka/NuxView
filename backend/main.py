@@ -52,9 +52,14 @@ def scan(req: ScanRequest):
     if not os.path.exists(req.path):
         raise HTTPException(status_code=404, detail=f"Path not found: {req.path}")
     
-    logger.info(f"Scanning {req.path} with max_depth={req.max_depth}")
+    # User requested 'full' so let's bump default significantly if they didn't specify
+    # But UI will handle the simplified view. 
+    # Use 50 as 'practically infinite' for most systems without crashing recursion limit.
+    depth = req.max_depth if req.max_depth is not None else 50
+    
+    logger.info(f"Scanning {req.path} with max_depth={depth}")
     try:
-        tree = scan_directory(req.path, req.max_depth, req.excludes)
+        tree = scan_directory(req.path, depth, req.excludes)
     except Exception as e:
         logger.error(f"Scan failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
