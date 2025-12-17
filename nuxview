@@ -2,7 +2,7 @@
 # NuxView CLI
 
 # Detect installation location
-if [ -d "/opt/nuxview" ]; then
+if [ -d "/opt/nuxview/app" ]; then
     INSTALL_ROOT="/opt/nuxview"
 else
     INSTALL_ROOT="$HOME/.nuxview"
