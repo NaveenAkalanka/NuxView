@@ -30,7 +30,7 @@ export const scanNode = async (path: string, excludes: string[] = []) => {
 };
 
 export const getTree = async () => {
-  const res = await api.get<FileNode>('/api/tree');
+  const res = await api.get<{ tree: FileNode; timestamp: string; path: string }>('/api/tree');
   return res.data;
 };
 

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { scanPath } from './api';
+import { useState, useEffect } from 'react';
+import { scanPath, getTree } from './api';
 import type { FileNode } from './api';
 import { VisualTree } from './components/VisualTree';
 import { SidePanel } from './components/SidePanel';
@@ -9,6 +9,24 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [inputPath, setInputPath] = useState('/');
   const [error, setError] = useState<string | null>(null);
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
+
+  // Auto-load cache on mount
+  useEffect(() => {
+    const loadCache = async () => {
+      try {
+        const data = await getTree();
+        if (data.tree) {
+          setTree(data.tree);
+          setLastSynced(data.timestamp);
+          setInputPath(data.path);
+        }
+      } catch (err) {
+        // Silently fail if no cache exists
+      }
+    };
+    loadCache();
+  }, []);
 
   const performScan = async () => {
     setLoading(true);
@@ -16,6 +34,7 @@ function App() {
     try {
       const data = await scanPath(inputPath);
       setTree(data);
+      setLastSynced(new Date().toLocaleString()); // Refresh local time
     } catch (err: any) {
       setError(err.message || 'Scan failed');
     } finally {
@@ -30,7 +49,9 @@ function App() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 style={{ fontSize: '1.5rem', margin: 0, background: 'linear-gradient(to right, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>NuxView</h1>
-            <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.6 }}>Interactive Linux File Explorer</p>
+            <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.6 }}>
+              Interactive Linux File Explorer {lastSynced && `• Last Synced: ${lastSynced}`}
+            </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <input

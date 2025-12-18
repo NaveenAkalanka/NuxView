@@ -68,21 +68,23 @@ def scan(req: ScanRequest):
          # Could be excluded or empty
          pass
             
-    # Save
-    if not DATA_DIR.exists():
-        try:
-            DATA_DIR.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            logger.error(f"Failed to create data dir: {e}")
+    import time
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Save with metadata
+    save_data = {
+        "timestamp": timestamp,
+        "path": req.path,
+        "tree": tree.model_dump()
+    }
     
     try:
         with open(TREE_FILE, "w") as f:
-            f.write(tree.model_dump_json(indent=2))
+            json.dump(save_data, f, indent=2)
     except Exception as e:
         logger.error(f"Failed to save tree file: {e}")
-        # We generally continue, but maybe warn?
         
-    return {"status": "success", "tree": tree}
+    return {"status": "success", "tree": tree, "timestamp": timestamp}
 
 @app.post("/api/scan/node")
 def scan_node(req: ScanRequest):
@@ -103,7 +105,7 @@ def scan_node(req: ScanRequest):
 @app.get("/api/tree")
 def get_tree():
     if not TREE_FILE.exists():
-        return {"name": "No scan yet", "path": "", "children": []}
+        return {"status": "error", "detail": "No scan yet"}
     
     try:
         with open(TREE_FILE, "r") as f:
