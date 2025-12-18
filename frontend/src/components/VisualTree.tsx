@@ -17,8 +17,8 @@ import dagre from 'dagre';
 import type { FileNode } from '../api';
 import { Folder } from 'lucide-react';
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 40;
+const NODE_WIDTH = 160;
+const NODE_HEIGHT = 36;
 
 // Helper to get folder color based on path or name
 const getFolderColor = (path: string) => {
@@ -53,12 +53,12 @@ const FolderNode = ({ data, isConnectable }: NodeProps) => {
 
     return (
         <div className="folder-node" onContextMenu={(e) => (data.onContextMenu as Function)(e, data)} style={{ borderColor: color }}>
-            <Handle type="target" position={Position.Left} isConnectable={isConnectable} style={{ background: color }} />
+            <Handle type="target" position={Position.Top} isConnectable={isConnectable} style={{ background: color }} />
             <div className="folder-node-content">
-                <Folder size={16} style={{ color }} />
+                <Folder size={14} style={{ color }} />
                 <span className="folder-name" title={data.fullPath as string}>{data.label as string}</span>
             </div>
-            <Handle type="source" position={Position.Right} isConnectable={isConnectable} style={{ background: color }} />
+            <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} style={{ background: color }} />
         </div>
     );
 };
@@ -73,8 +73,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-    // LR layout uses vertical space better (compact rows)
-    dagreGraph.setGraph({ rankdir: 'LR', nodesep: 20, ranksep: 80 });
+    // TB layout with ultra-tight horizontal spacing
+    dagreGraph.setGraph({ rankdir: 'TB', nodesep: 15, ranksep: 60 });
 
     nodes.forEach((node) => {
         dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
@@ -126,7 +126,7 @@ const flattenTree = (
             id: `${parentId}-${id}`,
             source: parentId,
             target: id,
-            type: 'default',
+            type: 'smoothstep', // Cleaner vertical connections
             animated: true,
             hidden: isHidden, // Hide edge if target is hidden? actually if either is hidden
         });
