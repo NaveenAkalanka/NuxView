@@ -1,104 +1,79 @@
-import { useState, useEffect } from 'react';
-import { getTree, scanPath } from './api';
+import { useState } from 'react';
+import { scanPath } from './api';
 import type { FileNode } from './api';
 import { VisualTree } from './components/VisualTree';
-import { RefreshCw, FolderSearch, AlertCircle } from 'lucide-react';
-import './index.css';
+import { SidePanel } from './components/SidePanel';
 
 function App() {
   const [tree, setTree] = useState<FileNode | null>(null);
   const [loading, setLoading] = useState(false);
   const [inputPath, setInputPath] = useState('/');
   const [error, setError] = useState<string | null>(null);
-  const [lastScan, setLastScan] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadTree();
-  }, []);
-
-  const loadTree = async () => {
-    setLoading(true);
-    try {
-      const data = await getTree();
-      if (data.path) {
-        setTree(data);
-        setInputPath(data.path);
-      }
-      setError(null);
-    } catch (err: any) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleScan = async () => {
-    if (!inputPath) return;
+  const performScan = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Backend now defaults to deep scan (50 levels)
-      const newTree = await scanPath(inputPath);
-      setTree(newTree);
-      setLastScan(new Date().toLocaleTimeString());
+      const data = await scanPath(inputPath);
+      setTree(data);
     } catch (err: any) {
-      const msg = err.response?.data?.detail || err.message || "Scan failed";
-      setError(msg);
+      setError(err.message || 'Scan failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="container" style={{ maxWidth: '100%', padding: '1rem', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="container" style={{ maxWidth: '100%', padding: '0', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-            <FolderSearch size={24} color="#38bdf8" />
-            NuxView
-          </h1>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Interactive Graph {lastScan && `• Scanned: ${lastScan}`}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <input
-            className="input"
-            value={inputPath}
-            onChange={e => setInputPath(e.target.value)}
-            placeholder="/path/to/scan"
-            style={{ minWidth: '300px' }}
-          />
-          <button className="btn" onClick={handleScan} disabled={loading}>
-            <RefreshCw size={18} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-            {loading ? 'Scanning...' : 'Scan'}
-          </button>
+      <div className="card" style={{ margin: '1rem', marginBottom: '0', padding: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{ fontSize: '1.5rem', margin: 0, background: 'linear-gradient(to right, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>NuxView</h1>
+            <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.6 }}>Interactive Linux File Explorer</p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              className="input"
+              value={inputPath}
+              onChange={(e) => setInputPath(e.target.value)}
+              placeholder="/etc or /home..."
+              style={{ width: '300px' }}
+              onKeyDown={(e) => e.key === 'Enter' && performScan()}
+            />
+            <button className="button" onClick={performScan} disabled={loading}>
+              {loading ? 'Scanning...' : 'Scan Path'}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Error */}
       {error && (
-        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--danger)', color: '#fca5a5', borderRadius: '8px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <AlertCircle size={20} />
-          {error}
+        <div className="card" style={{ margin: '1rem', borderColor: '#ef4444', color: '#ef4444' }}>
+          Error: {error}
         </div>
       )}
 
-      {/* Graph View */}
-      <div style={{ flex: 1, position: 'relative' }}>
-        {tree ? (
-          <VisualTree data={tree} />
-        ) : (
-          <div className="card" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-            No directory scanned yet. Enter a path above to start visualizing.
-          </div>
-        )}
+      {/* Main Content Area: Side Panel + Graph */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        <SidePanel data={tree} />
+
+        <div style={{ flex: 1, position: 'relative' }}>
+          {tree ? (
+            <VisualTree data={tree} />
+          ) : (
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+              <p>Enter a path above to start exploring</p>
+              <p style={{ fontSize: '0.8rem' }}>Defaulting to root (/) for full system scan</p>
+            </div>
+          )}
+        </div>
       </div>
 
       <style>{`
          @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+         .side-tree-item:hover { background: rgba(255, 255, 255, 0.05); }
        `}</style>
     </div>
   );

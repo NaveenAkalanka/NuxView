@@ -162,6 +162,21 @@ body {
   box-shadow: 0 0 0 2px var(--accent-color);
 }
 
+.folder-node .react-flow__handle {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  border: none;
+}
+
+.folder-node .react-flow__handle-top {
+  top: -4px;
+}
+
+.folder-node .react-flow__handle-bottom {
+  bottom: -4px;
+}
+
 .folder-node-content {
   display: flex;
   align-items: center;
