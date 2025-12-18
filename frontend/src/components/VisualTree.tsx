@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import {
     ReactFlow,
     Background,
@@ -14,8 +14,9 @@ import {
 import type { Node, Edge, NodeProps } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
+import { scanNode } from '../api';
 import type { FileNode } from '../api';
-import { Folder } from 'lucide-react';
+import { Folder, Plus, Minus } from 'lucide-react';
 
 const NODE_WIDTH = 160;
 const NODE_HEIGHT = 36;
@@ -34,16 +35,33 @@ const getFolderColor = (path: string) => {
     return colors[Math.abs(hash) % colors.length];
 };
 
-const FolderNode = ({ data, isConnectable }: NodeProps) => {
+const FolderNode = ({ data }: NodeProps) => {
     const color = getFolderColor(data.fullPath as string);
+    const isExpanded = data.isExpanded as boolean;
+    const onExpand = data.onExpand as (id: string, path: string) => void;
+
     return (
-        <div className="folder-node" onContextMenu={(e) => (data.onContextMenu as Function)(e, data)} style={{ borderColor: color }}>
-            <Handle type="target" position={Position.Top} isConnectable={isConnectable} style={{ background: color }} />
-            <div className="folder-node-content">
+        <div className="folder-node" onContextMenu={(e) => (data.onContextMenu as Function)(e, data)} style={{ borderColor: color, position: 'relative' }}>
+            <Handle type="target" position={Position.Top} style={{ background: color }} />
+            <div className="folder-node-content" style={{ paddingRight: '24px' }}>
                 <Folder size={14} style={{ color }} />
                 <span className="folder-name" title={data.fullPath as string}>{data.label as string}</span>
             </div>
-            <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} style={{ background: color }} />
+
+            {/* Expand/Collapse Button */}
+            <button
+                onClick={(e) => { e.stopPropagation(); onExpand(data.id as string, data.fullPath as string); }}
+                style={{
+                    position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
+                    background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '4px',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '2px', color: color, pointerEvents: 'all'
+                }}
+            >
+                {isExpanded ? <Minus size={12} /> : <Plus size={12} />}
+            </button>
+
+            <Handle type="source" position={Position.Bottom} style={{ background: color }} />
         </div>
     );
 };
@@ -54,11 +72,16 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
     dagreGraph.setGraph({ rankdir: 'TB', nodesep: 30, ranksep: 80 });
-    nodes.forEach((node) => dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT }));
-    edges.forEach((edge) => dagreGraph.setEdge(edge.source, edge.target));
+    nodes.filter(n => !n.hidden).forEach((node) => {
+        dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    });
+    edges.filter(e => !e.hidden).forEach((edge) => {
+        dagreGraph.setEdge(edge.source, edge.target);
+    });
     dagre.layout(dagreGraph);
     return {
         nodes: nodes.map((node) => {
+            if (node.hidden) return node;
             const { x, y } = dagreGraph.node(node.id);
             return { ...node, position: { x: x - NODE_WIDTH / 2, y: y - NODE_HEIGHT / 2 } };
         }),
@@ -69,7 +92,6 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-    const [visibleDepth, setVisibleDepth] = useState(4);
     const { fitView } = useReactFlow();
     const dragStartPos = useRef<{ x: number; y: number } | null>(null);
 
@@ -78,22 +100,72 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
         window.open(`https://www.google.com/search?q=${encodeURIComponent(`linux directory ${nodeData.fullPath}`)}`, '_blank');
     }, []);
 
+    const handleExpand = useCallback(async (id: string, path: string) => {
+        // Check if children already exist in edges
+        const hasChildren = edges.some(e => e.source === id);
+
+        if (hasChildren) {
+            // Toggle visibility of children recursively
+            const toggleSubtree = (parentId: string, visible: boolean) => {
+                const childIds = edges.filter(e => e.source === parentId).map(e => e.target);
+                setNodes(nds => nds.map(n => childIds.includes(n.id) ? { ...n, hidden: !visible } : n));
+                setEdges(eds => eds.map(e => childIds.includes(e.target) && e.source === parentId ? { ...e, hidden: !visible } : e));
+                if (!visible) childIds.forEach(cid => toggleSubtree(cid, false));
+            };
+
+            setNodes(nds => nds.map(n => {
+                if (n.id === id) {
+                    const nextState = !n.data.isExpanded;
+                    toggleSubtree(id, nextState);
+                    return { ...n, data: { ...n.data, isExpanded: nextState } };
+                }
+                return n;
+            }));
+            return;
+        }
+
+        // Fetch children from API
+        try {
+            const newNode = await scanNode(path);
+            if (newNode && newNode.children) {
+                setNodes(nds => {
+                    const updatedNds = nds.map(n => n.id === id ? { ...n, data: { ...n.data, isExpanded: true } } : n);
+                    const newNodes: Node[] = newNode.children!.map(child => ({
+                        id: child.path,
+                        type: 'folder',
+                        position: { x: 0, y: 0 },
+                        data: { id: child.path, label: child.name, fullPath: child.path, isExpanded: false, onExpand: handleExpand, onContextMenu: handleContextMenu }
+                    }));
+                    return [...updatedNds, ...newNodes];
+                });
+                setEdges(eds => {
+                    const newEdges: Edge[] = newNode.children!.map(child => ({
+                        id: `${id}-${child.path}`,
+                        source: id,
+                        target: child.path,
+                        type: 'smoothstep',
+                        animated: true
+                    }));
+                    return [...eds, ...newEdges];
+                });
+            }
+        } catch (err) {
+            console.error("Expand failed", err);
+        }
+    }, [edges, handleContextMenu, setEdges, setNodes]);
+
     useEffect(() => {
         const initialNodes: Node[] = [];
         const initialEdges: Edge[] = [];
         const flattenTree = (node: FileNode, parentId: string | null = null, depth: number = 0) => {
             const id = node.path;
-            const isHidden = depth >= visibleDepth;
             initialNodes.push({
-                id, type: 'folder', hidden: isHidden,
-                data: { label: node.name || '/', fullPath: node.path, depth, onContextMenu: handleContextMenu },
+                id, type: 'folder',
+                data: { id, label: node.name || '/', fullPath: node.path, depth, isExpanded: node.children && node.children.length > 0, onExpand: handleExpand, onContextMenu: handleContextMenu },
                 position: { x: 0, y: 0 }
             });
             if (parentId) {
-                initialEdges.push({
-                    id: `${parentId}-${id}`, source: parentId, target: id,
-                    type: 'smoothstep', animated: true, hidden: isHidden
-                });
+                initialEdges.push({ id: `${parentId}-${id}`, source: parentId, target: id, type: 'smoothstep', animated: true });
             }
             node.children?.forEach(child => flattenTree(child, id, depth + 1));
         };
@@ -102,36 +174,40 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
         setNodes(lNodes);
         setEdges(lEdges);
         setTimeout(() => fitView({ nodes: [{ id: data.path }], duration: 800, padding: 2 }), 100);
-    }, [data, visibleDepth, fitView, handleContextMenu, setNodes, setEdges]);
+    }, [data, handleExpand, handleContextMenu, fitView, setNodes, setEdges]);
 
-    const onNodeDragStart = (_: any, node: Node) => {
-        dragStartPos.current = { ...node.position };
-    };
-
+    // Subtree dragging logic
+    const onNodeDragStart = (_: any, node: Node) => { dragStartPos.current = { ...node.position }; };
     const onNodeDrag = (_: any, node: Node) => {
         if (!dragStartPos.current) return;
         const dx = node.position.x - dragStartPos.current.x;
         const dy = node.position.y - dragStartPos.current.y;
         dragStartPos.current = { ...node.position };
-
         const findDescendants = (parentId: string): string[] => {
             const children = edges.filter(e => e.source === parentId).map(e => e.target);
             return children.reduce((acc, child) => [...acc, child, ...findDescendants(child)], [] as string[]);
         };
-
         const descendants = findDescendants(node.id);
         if (descendants.length > 0) {
             setNodes(nds => nds.map(n => descendants.includes(n.id) ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } } : n));
         }
     };
 
+    // Run layout when nodes/edges change (for expansion)
+    const applyLayout = useCallback(() => {
+        const { nodes: lNodes, edges: lEdges } = getLayoutedElements(nodes, edges);
+        setNodes(lNodes);
+        setEdges(lEdges);
+    }, [nodes, edges, setNodes, setEdges]);
+
     return (
         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 5, background: 'var(--card-bg)', padding: '5px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Visible Levels:</span>
-                <input type="range" min="1" max="10" value={visibleDepth} onChange={(e) => setVisibleDepth(parseInt(e.target.value))} style={{ cursor: 'pointer' }} />
-                <span style={{ fontWeight: 'bold' }}>{visibleDepth}</span>
-            </div>
+            <button
+                onClick={applyLayout}
+                style={{ position: 'absolute', top: 10, left: 10, zIndex: 10, background: 'var(--primary-color)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+            >
+                Re-align Layout
+            </button>
             <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} nodeTypes={nodeTypes} onNodeDragStart={onNodeDragStart} onNodeDrag={onNodeDrag} fitView snapToGrid snapGrid={[15, 15]}>
                 <Background color="#333" gap={20} /><Controls /><MiniMap nodeStrokeWidth={3} zoomable pannable />
             </ReactFlow>

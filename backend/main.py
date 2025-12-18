@@ -44,7 +44,7 @@ app.add_middleware(
 
 class ScanRequest(BaseModel):
     path: str
-    max_depth: Optional[int] = 5
+    max_depth: Optional[int] = 3 # Lower default for speed
     excludes: Optional[List[str]] = []
 
 @app.post("/api/scan")
@@ -83,6 +83,22 @@ def scan(req: ScanRequest):
         # We generally continue, but maybe warn?
         
     return {"status": "success", "tree": tree}
+
+@app.post("/api/scan/node")
+def scan_node(req: ScanRequest):
+    """Scan only one level deep for lazy loading."""
+    if not os.path.exists(req.path):
+        raise HTTPException(status_code=404, detail=f"Path not found: {req.path}")
+    
+    logger.info(f"Node-scan for {req.path}")
+    try:
+        # Depth 1 only
+        tree = scan_directory(req.path, 1, req.excludes)
+    except Exception as e:
+        logger.error(f"Node-scan failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return {"status": "success", "node": tree}
 
 @app.get("/api/tree")
 def get_tree():

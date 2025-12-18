@@ -19,9 +19,14 @@ export interface FileNode {
   children?: FileNode[];
 }
 
-export const scanPath = async (path: string, maxDepth: number = 5, excludes: string[] = []) => {
+export const scanPath = async (path: string, maxDepth: number = 3, excludes: string[] = []) => {
   const res = await api.post<{ tree: FileNode }>('/api/scan', { path, max_depth: maxDepth, excludes });
   return res.data.tree;
+};
+
+export const scanNode = async (path: string, excludes: string[] = []) => {
+  const res = await api.post<{ node: FileNode }>('/api/scan/node', { path, excludes });
+  return res.data.node;
 };
 
 export const getTree = async () => {
@@ -30,10 +35,10 @@ export const getTree = async () => {
 };
 
 export const checkHealth = async () => {
-    try {
-        await api.get('/api/health');
-        return true;
-    } catch {
-        return false;
-    }
+  try {
+    await api.get('/api/health');
+    return true;
+  } catch {
+    return false;
+  }
 }
