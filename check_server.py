@@ -14,25 +14,25 @@ def check_remote():
         client.connect(hostname, username=username, password=password, timeout=10)
         print("Connected.")
         
-        # 1. Check if nuxview binary exists (is it installed?)
-        stdin, stdout, stderr = client.exec_command("which nuxview")
-        nuxview_path = stdout.read().decode().strip()
+        # 1. Check if nuxview binary exists at the known local path
+        local_bin_path = "/home/ninja/.local/bin/nuxview"
+        stdin, stdout, stderr = client.exec_command(f"ls -l {local_bin_path}")
+        exists = stdout.read().decode().strip()
         
-        if not nuxview_path:
-            print("NuxView is NOT installed (binary 'nuxview' not found in PATH).")
-            # Maybe check /opt/nuxview/venv/bin/nuxview?
+        if not exists:
+            print(f"NuxView binary NOT found at {local_bin_path}")
         else:
-            print(f"NuxView is installed at: {nuxview_path}")
+            print(f"NuxView binary found at: {local_bin_path}")
 
-        # 2. Check status via CLI
-        print("Checking status via 'nuxview status'...")
-        stdin, stdout, stderr = client.exec_command("nuxview status")
+        # 2. Check status via full path
+        print("Checking status via full path...")
+        stdin, stdout, stderr = client.exec_command(f"{local_bin_path} status")
         status_output = stdout.read().decode().strip()
         print("Status Output:")
         print(status_output)
 
-        # 3. Double check process list
-        print("Checking process list...")
+        # 3. Double check process list (broad grep)
+        print("Checking process list (broad grep)...")
         stdin, stdout, stderr = client.exec_command("ps aux | grep uvicorn | grep -v grep")
         ps_output = stdout.read().decode().strip()
         if ps_output:

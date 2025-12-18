@@ -17,22 +17,48 @@ import dagre from 'dagre';
 import type { FileNode } from '../api';
 import { Folder } from 'lucide-react';
 
-const NODE_WIDTH = 200;
-const NODE_HEIGHT = 60;
+const NODE_WIDTH = 180;
+const NODE_HEIGHT = 40;
+
+// Helper to get folder color based on path or name
+const getFolderColor = (path: string) => {
+    const name = path.split('/').pop()?.toLowerCase() || '';
+    const wellKnown: Record<string, string> = {
+        'bin': '#22c55e', // green
+        'etc': '#ef4444', // red
+        'home': '#3b82f6', // blue
+        'usr': '#a855f7', // purple
+        'var': '#f59e0b', // amber
+        'root': '#ec4899', // pink
+        'dev': '#06b6d4', // cyan
+        'boot': '#84cc16', // lime
+        'sys': '#6366f1', // indigo
+        'proc': '#94a3b8' // slate
+    };
+
+    if (wellKnown[name]) return wellKnown[name];
+
+    // Hash fallback
+    let hash = 0;
+    for (let i = 0; i < path.length; i++) {
+        hash = path.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colors = ['#38bdf8', '#fbbf24', '#f87171', '#c084fc', '#4ade80', '#fb7185'];
+    return colors[Math.abs(hash) % colors.length];
+};
 
 // Custom Node Component
 const FolderNode = ({ data, isConnectable }: NodeProps) => {
+    const color = getFolderColor(data.fullPath as string);
+
     return (
-        <div className="folder-node" onContextMenu={(e) => (data.onContextMenu as Function)(e, data)}>
-            <Handle type="target" position={Position.Top} isConnectable={isConnectable} style={{ background: '#555' }} />
+        <div className="folder-node" onContextMenu={(e) => (data.onContextMenu as Function)(e, data)} style={{ borderColor: color }}>
+            <Handle type="target" position={Position.Left} isConnectable={isConnectable} style={{ background: color }} />
             <div className="folder-node-content">
-                <Folder size={20} className="text-sky-400" />
+                <Folder size={16} style={{ color }} />
                 <span className="folder-name" title={data.fullPath as string}>{data.label as string}</span>
             </div>
-            <div className="folder-node-actions">
-                {/* Tiny corner indicator? */}
-            </div>
-            <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} style={{ background: '#555' }} />
+            <Handle type="source" position={Position.Right} isConnectable={isConnectable} style={{ background: color }} />
         </div>
     );
 };
@@ -47,7 +73,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-    dagreGraph.setGraph({ rankdir: 'TB', nodesep: 50, ranksep: 100 });
+    // LR layout uses vertical space better (compact rows)
+    dagreGraph.setGraph({ rankdir: 'LR', nodesep: 20, ranksep: 80 });
 
     nodes.forEach((node) => {
         dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });

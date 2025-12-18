@@ -147,13 +147,14 @@ body {
 .folder-node {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  width: 200px;
-  padding: 10px;
+  border-radius: 6px;
+  width: 180px;
+  padding: 6px 10px;
   display: flex;
   flex-direction: column;
   transition: all 0.2s;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  font-size: 0.85rem;
 }
 
 .folder-node:hover {

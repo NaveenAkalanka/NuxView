@@ -8,7 +8,7 @@ import './index.css';
 function App() {
   const [tree, setTree] = useState<FileNode | null>(null);
   const [loading, setLoading] = useState(false);
-  const [inputPath, setInputPath] = useState('/home');
+  const [inputPath, setInputPath] = useState('/');
   const [error, setError] = useState<string | null>(null);
   const [lastScan, setLastScan] = useState<string | null>(null);
 

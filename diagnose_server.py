@@ -17,45 +17,29 @@ def diagnose():
         client.connect(hostname, username=username, password=password)
         print("Connected.")
         
-        # 1. Check if process is running
-        print("Checking processes...")
-        stdin, stdout, stderr = client.exec_command("ps aux | grep uvicorn")
-        print(stdout.read().decode(errors='replace'))
-
-        # 2. Check logs dir
-        print("Checking logs dir...")
-        stdin, stdout, stderr = client.exec_command("ls -la ~/.nuxview/logs")
-        print(stdout.read().decode(errors='replace'))
-        print(stderr.read().decode(errors='replace'))
-
-        # 3. Check open ports
-        print("Checking listening ports (ss -tuln)...")
-        stdin, stdout, stderr = client.exec_command("ss -tuln | grep 4897")
-        print(stdout.read().decode(errors='replace'))
-
-        # 4. Check firewall (ufw) -- requires sudo
-        print("Checking UFW status...")
-        sudo_cmd = "echo 'Nvnaka7799@' | sudo -S -p '' ufw status"
-        stdin, stdout, stderr = client.exec_command(sudo_cmd)
-        print(stdout.read().decode(errors='replace'))
-
-        # 5. Try curl localhost
-        print("Curling localhost...")
-        stdin, stdout, stderr = client.exec_command("curl -v http://127.0.0.1:4897/api/health")
-        print(stdout.read().decode(errors='replace'))
-        print(stderr.read().decode(errors='replace'))
+        # 1. Broad search for nuxview
+        print("Searching for 'nuxview' binary/dir...")
+        commands = [
+            "which nuxview",
+            "ls -d ~/.nuxview 2>/dev/null",
+            "find ~ -name nuxview 2>/dev/null",
+            "ls -la /usr/local/bin/nuxview 2>/dev/null",
+            "ls -la /opt/nuxview 2>/dev/null"
+        ]
         
-        # 6. Attempt Fix: Create logs dir if missing
-        print("Ensuring logs dir exists...")
-        client.exec_command("mkdir -p ~/.nuxview/logs")
-        
-        # 7. Attempt Fix: Restart
-        print("Restarting service...")
-        client.exec_command("$HOME/.local/bin/nuxview stop")
-        stdin, stdout, stderr = client.exec_command("$HOME/.local/bin/nuxview start --host 0.0.0.0")
-        print(stdout.read().decode(errors='replace'))
-        print(stderr.read().decode(errors='replace'))
+        for cmd in commands:
+            print(f"Running: {cmd}")
+            stdin, stdout, stderr = client.exec_command(cmd)
+            out = stdout.read().decode().strip()
+            if out:
+                print(f"Result: {out}")
+            else:
+                print("Result: None")
 
+        # 2. Check running processes
+        print("Checking for running uvicorn processes...")
+        stdin, stdout, stderr = client.exec_command("ps aux | grep uvicorn | grep -v grep")
+        print(stdout.read().decode().strip() or "None found")
 
     except Exception as e:
         print(f"Error: {e}")

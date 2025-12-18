@@ -8,7 +8,7 @@ hostname = "192.168.1.2"
 username = "ninja"
 password = "Nvnaka7799@"
 
-def deploy():
+def update_remote():
     print(f"Connecting to {username}@{hostname}...")
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -17,23 +17,13 @@ def deploy():
         client.connect(hostname, username=username, password=password)
         print("Connected.")
         
-        # 1. Install dependencies (git, python3-venv)
-        print("Installing dependencies (git, python3-venv) via sudo...")
-        sudo_pass = password
-        deps_cmd = f"echo '{sudo_pass}' | sudo -S -p '' apt-get update && echo '{sudo_pass}' | sudo -S -p '' apt-get install -y git python3-venv python3-full"
-        
-        stdin, stdout, stderr = client.exec_command(deps_cmd)
-        exit_status = stdout.channel.recv_exit_status()
-        if exit_status != 0:
-             print("Dependency install failed.")
-             print("STDERR:", stderr.read().decode(errors='replace'))
-        else:
-             print("Dependencies installed successfully.")
-        
-        # 2. Deploy command
+        # 1. Stop service
+        print("Stopping service...")
+        client.exec_command("$HOME/.local/bin/nuxview stop")
+
+        # 2. Re-run install to get new code & frontend build
         install_cmd = "curl -sL https://raw.githubusercontent.com/NaveenAkalanka/NuxView/main/remote_install.sh | bash"
-        
-        print(f"Running install: {install_cmd}")
+        print(f"Running update: {install_cmd}")
         stdin, stdout, stderr = client.exec_command(install_cmd)
         
         # Stream output
@@ -48,13 +38,12 @@ def deploy():
             
         exit_status = stdout.channel.recv_exit_status()
         if exit_status != 0:
-            print("Install script failed.")
+            print("Update failed.")
             print(stderr.read().decode(errors='replace'))
             return
 
         # 3. Start it
         print("Starting NuxView...")
-        # Ensure PATH or use absolute path
         start_cmd = "$HOME/.local/bin/nuxview start --host 0.0.0.0" 
         stdin, stdout, stderr = client.exec_command(start_cmd)
         print(stdout.read().decode(errors='replace'))
@@ -68,4 +57,4 @@ def deploy():
         client.close()
 
 if __name__ == "__main__":
-    deploy()
+    update_remote()
