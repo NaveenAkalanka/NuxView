@@ -122,8 +122,20 @@ def get_tree():
         with open(TREE_FILE, "r") as f:
             data = json.load(f)
         
-        # Return only metadata and root node info, strip children for speed
+        # Return root and its immediate children (Level 1 only) to prevent UI hangs while showing some data
         root_data = data.get("tree", {})
+        
+        # Clone root and its immediate children, but ensure children's children are None or []
+        shallow_children = []
+        if "children" in root_data and root_data["children"]:
+            for child in root_data["children"]:
+                shallow_children.append({
+                    "name": child.get("name"),
+                    "path": child.get("path"),
+                    "type": "directory",
+                    "children": [] # Strip deeper
+                })
+
         return {
             "status": "success",
             "timestamp": data.get("timestamp"),
@@ -132,7 +144,7 @@ def get_tree():
                 "name": root_data.get("name"),
                 "path": root_data.get("path"),
                 "type": "directory",
-                "has_children": len(root_data.get("children", [])) > 0
+                "children": shallow_children
             }
         }
     except Exception as e:
