@@ -1,13 +1,13 @@
 import os
+import subprocess
 import logging
 import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Optional, Dict, Any, Set
+from typing import List, Optional, Dict, Any
 from models import FileNode
 
 logger = logging.getLogger("nuxview.scanner")
 
-DEFAULT_EXCLUDES = {"proc", "sys", "dev", "run", "tmp", "var/lib/docker", "lost+found", ".git", "node_modules"}
+DEFAULT_EXCLUDES = ["/proc", "/sys", "/dev", "/run", "/tmp", "/var/lib/docker", "/lost+found"]
 
 class ScanStatus:
     def __init__(self):
@@ -22,78 +22,94 @@ class ScanStatus:
         with self._lock:
             for k, v in kwargs.items():
                 setattr(self, k, v)
-            if self.total_dirs > 0:
-                self.progress = min(99, int((self.scanned_dirs / self.total_dirs) * 100))
 
 global_scan_status = ScanStatus()
 
-def scan_directory_parallel(
-    root_path: str, 
-    max_depth: int = 50,
-    excludes: Optional[List[str]] = None
-) -> Optional[FileNode]:
-    """
-    Parallel directory scanner using a single ThreadPoolExecutor to prevent deadlocks.
-    """
-    root_path = os.path.abspath(root_path)
-    exclude_set = set(DEFAULT_EXCLUDES)
-    if excludes:
-        exclude_set.update(excludes)
-
-    global_scan_status.update(is_scanning=True, progress=0, scanned_dirs=0, total_dirs=1, error=None)
-
-    # Use a single executor for the entire scan
-    with ThreadPoolExecutor(max_workers=16) as executor:
+def paths_to_tree(paths: List[str], root_path: str) -> Optional[FileNode]:
+    """Converts a flat list of paths into a hierarchical FileNode structure."""
+    if not paths:
+        return None
+    
+    # Sort paths by length to ensure parents are processed before children
+    paths = sorted(paths, key=len)
+    
+    nodes: Dict[str, FileNode] = {}
+    root_node = None
+    
+    for path in paths:
+        if not path: continue
+        name = os.path.basename(path) or "/"
+        node = FileNode(name=name, path=path, children=[])
+        nodes[path] = node
         
-        def _scan_immediate(path: str) -> List[str]:
-            try:
-                with os.scandir(path) as it:
-                    return [entry.path for entry in it 
-                            if entry.is_dir() and not entry.is_symlink() and entry.name not in exclude_set]
-            except (PermissionError, OSError):
-                return []
-
-        # We'll use a recursive function but use the executor to offload work
-        def _worker(current_path: str, current_depth: int) -> Optional[FileNode]:
-            if current_depth > max_depth:
-                return None
-
-            name = os.path.basename(current_path) or current_path
-            node = FileNode(name=name, path=current_path, children=[])
-
-            sub_paths = _scan_immediate(current_path)
-            if sub_paths:
-                with global_scan_status._lock:
-                    global_scan_status.total_dirs += len(sub_paths)
-
-                # Parallelize only top levels to keep overhead low
-                if current_depth < 2:
-                    futures = [executor.submit(_worker, sp, current_depth + 1) for sp in sub_paths]
-                    for f in as_completed(futures):
-                        child = f.result()
-                        if child:
-                            node.children.append(child)
-                else:
-                    for sp in sub_paths:
-                        child = _worker(sp, current_depth + 1)
-                        if child:
-                            node.children.append(child)
-
-            with global_scan_status._lock:
-                global_scan_status.scanned_dirs += 1
-                if global_scan_status.total_dirs > 0:
-                    global_scan_status.progress = min(99, int((global_scan_status.scanned_dirs / global_scan_status.total_dirs) * 100))
+        if path == root_path:
+            root_node = node
+            continue
             
-            return node
+        parent_path = os.path.dirname(path)
+        if parent_path in nodes:
+            if nodes[parent_path].children is None:
+                nodes[parent_path].children = []
+            nodes[parent_path].children.append(node)
+            
+    return root_node
 
-        try:
-            root_node = _worker(root_path, 0)
-            global_scan_status.update(is_scanning=False, progress=100)
-            return root_node
-        except Exception as e:
-            logger.error(f"Parallel scan failed: {e}")
-            global_scan_status.update(is_scanning=False, error=str(e))
-            return None
+def scan_with_find(root_path: str, max_depth: int = 50, excludes: Optional[List[str]] = None) -> Optional[FileNode]:
+    """Scans the file system using the native Linux 'find' command for maximum speed."""
+    root_path = os.path.abspath(root_path)
+    global_scan_status.update(is_scanning=True, progress=0, error=None)
+    
+    exclude_args = []
+    # Build exclusion arguments for find
+    for ex in DEFAULT_EXCLUDES:
+        exclude_args.extend(["-not", "-path", f"{ex.rstrip('/')}*"])
+    if excludes:
+        for ex in excludes:
+            exclude_args.extend(["-not", "-path", f"*{ex}*"])
+
+    command = [
+        "find", root_path,
+        "-maxdepth", str(max_depth),
+        "-type", "d"
+    ] + exclude_args
+
+    logger.info(f"Executing shell scan: {' '.join(command)}")
+    
+    try:
+        # Run find command and capture output
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        paths = []
+        
+        global_scan_status.update(progress=10) # Initial progress
+        
+        while True:
+            line = process.stdout.readline()
+            if not line and process.poll() is not None:
+                break
+            if line:
+                paths.append(line.strip())
+                # Update progress roughly as we find nodes
+                if len(paths) % 1000 == 0:
+                     global_scan_status.update(progress=min(90, 10 + (len(paths) // 1000)))
+        
+        if process.returncode != 0 and process.returncode is not None:
+            stderr = process.stderr.read()
+            logger.error(f"Find command failed: {stderr}")
+            # Permissions errors are common, we usually ignore them unless it's critical
+        
+        global_scan_status.update(progress=95)
+        tree = paths_to_tree(paths, root_path)
+        global_scan_status.update(is_scanning=False, progress=100)
+        return tree
+
+    except Exception as e:
+        logger.error(f"Shell scan threw exception: {e}")
+        global_scan_status.update(is_scanning=False, error=str(e))
+        return None
+
+# Keep compatible signature
+def scan_directory_parallel(root_path, max_depth=50, excludes=None):
+    return scan_with_find(root_path, max_depth, excludes)
 
 def scan_directory(root_path, max_depth=5, excludes=None):
-    return scan_directory_parallel(root_path, max_depth, excludes)
+    return scan_with_find(root_path, max_depth, excludes)
