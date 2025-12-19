@@ -114,42 +114,57 @@ def scan_node(req: ScanRequest):
 
 @app.get("/api/tree")
 def get_tree():
-    """Returns only the root/top-level of the cached tree to prevent UI hangs."""
-    if not TREE_FILE.exists():
-        return {"status": "error", "detail": "No scan yet"}
-    
-    try:
-        with open(TREE_FILE, "r") as f:
-            data = json.load(f)
-        
-        # Return root and its immediate children (Level 1 only) to prevent UI hangs while showing some data
-        root_data = data.get("tree", {})
-        
-        # Clone root and its immediate children, but ensure children's children are None or []
-        shallow_children = []
-        if "children" in root_data and root_data["children"]:
-            for child in root_data["children"]:
-                shallow_children.append({
-                    "name": child.get("name"),
-                    "path": child.get("path"),
-                    "type": "directory",
-                    "children": [] # Strip deeper
-                })
+    """Returns the cached tree root, or falls back to a live root scan."""
+    # 1. Try Cache File
+    if TREE_FILE.exists():
+        try:
+            with open(TREE_FILE, "r") as f:
+                data = json.load(f)
+            
+            # Return root and its immediate children (Level 1 only)
+            root_data = data.get("tree", {})
+            shallow_children = []
+            if "children" in root_data and root_data["children"]:
+                for child in root_data["children"]:
+                    shallow_children.append({
+                        "name": child.get("name"),
+                        "path": child.get("path"),
+                        "type": "directory",
+                        "children": []
+                    })
 
-        return {
-            "status": "success",
-            "timestamp": data.get("timestamp"),
-            "path": data.get("path"),
-            "root": {
-                "name": root_data.get("name"),
-                "path": root_data.get("path"),
-                "type": "directory",
-                "children": shallow_children
+            return {
+                "status": "success",
+                "timestamp": data.get("timestamp"),
+                "path": data.get("path"),
+                "root": {
+                    "name": root_data.get("name"),
+                    "path": root_data.get("path"),
+                    "type": "directory",
+                    "children": shallow_children
+                }
             }
-        }
+        except Exception as e:
+            logger.error(f"Cache broken: {e}. Falling back to live...")
+
+    # 2. Live Fallback (No cache or cache broken)
+    try:
+        root_path = "/" # Default
+        if os.name == 'nt': root_path = "C:\\" # Windows support
+        
+        logger.info(f"Performing LIVE fallback scan for {root_path}")
+        live_root = scan_directory(root_path, 1)
+        if live_root:
+            return {
+                "status": "success",
+                "timestamp": "Live (No Cache)",
+                "path": root_path,
+                "root": live_root.model_dump()
+            }
     except Exception as e:
-        logger.error(f"Failed to read tree file: {e}")
-        raise HTTPException(status_code=500, detail="Failed to load tree")
+        logger.error(f"Live fallback failed: {e}")
+
+    return {"status": "error", "detail": "Could not load tree (Cache missing & Live fail)"}
 
 @app.get("/api/health")
 def health():

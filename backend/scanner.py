@@ -122,9 +122,53 @@ def scan_with_find(root_path: str, max_depth: int = 50, excludes: Optional[List[
         global_scan_status.update(is_scanning=False, error=str(e))
         return None
 
-# Keep compatible signature
-def scan_directory_parallel(root_path, max_depth=50, excludes=None):
-    return scan_with_find(root_path, max_depth, excludes)
+def scan_with_python(root_path: str, max_depth: int = 1, excludes: Optional[List[str]] = None) -> Optional[FileNode]:
+    """Native Python fallback using os.scandir (slower but works everywhere)."""
+    root_path = os.path.abspath(root_path)
+    if not os.path.isdir(root_path): return None
+    
+    name = os.path.basename(root_path) or "/"
+    root = FileNode(name=name, path=root_path, type="directory", children=[])
+    
+    if max_depth <= 0: return root
+    
+    exclude_list = DEFAULT_EXCLUDES + (excludes or [])
+    
+    try:
+        with os.scandir(root_path) as it:
+            for entry in it:
+                if entry.is_dir():
+                    path = entry.path
+                    # Check exclusions
+                    if any(ex in path for ex in exclude_list): continue
+                    
+                    child = scan_with_python(path, max_depth - 1, excludes)
+                    if child:
+                        root.children.append(child)
+        return root
+    except PermissionError:
+        return root # Silent fail for perms
+    except Exception as e:
+        logger.error(f"Python scan failed at {root_path}: {e}")
+        return root
 
-def scan_directory(root_path, max_depth=5, excludes=None):
-    return scan_with_find(root_path, max_depth, excludes)
+def scan_directory(root_path, max_depth=1, excludes=None):
+    """Primary entry point: Tries shell scan, falls back to Python."""
+    # For depth 1, Python is faster and safer
+    if max_depth == 1:
+        return scan_with_python(root_path, 1, excludes)
+        
+    try:
+        # Check if find exists
+        import shutil
+        if shutil.which("find"):
+            return scan_with_find(root_path, max_depth, excludes)
+    except:
+        pass
+        
+    logger.warning(f"Shell scan unavailable, falling back to Python for {root_path}")
+    return scan_with_python(root_path, max_depth, excludes)
+
+def scan_directory_parallel(root_path, max_depth=50, excludes=None):
+    return scan_directory(root_path, max_depth, excludes)
+
