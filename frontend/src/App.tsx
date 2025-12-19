@@ -15,44 +15,53 @@ function App() {
 
   const pollTimer = useRef<number | null>(null);
 
-  // Auto-load cache on mount
-  useEffect(() => {
-    const loadCache = async () => {
-      try {
-        const data = await getTree();
-        if (data.tree) {
-          setTree(data.tree);
-          setLastSynced(data.timestamp);
-          setInputPath(data.path);
-        }
-      } catch (err) { /* ignore */ }
-    };
-    loadCache();
-    checkScanningStatus();
-  }, []);
-
   const checkScanningStatus = async () => {
     try {
       const status = await getScanStatus();
       setIsScanning(status.is_scanning);
       setScanProgress(status.progress);
 
+      if (status.error) {
+        setError(`Scan Error: ${status.error}`);
+        if (pollTimer.current) {
+          window.clearInterval(pollTimer.current);
+          pollTimer.current = null;
+        }
+        return;
+      }
+
       if (status.is_scanning) {
         if (!pollTimer.current) {
-          pollTimer.current = window.setInterval(checkScanningStatus, 2000);
+          pollTimer.current = window.setInterval(checkScanningStatus, 1500);
         }
-      } else if (pollTimer.current) {
-        window.clearInterval(pollTimer.current);
-        pollTimer.current = null;
-        // Scan just finished, reload tree
-        const data = await getTree();
-        if (data.tree) {
-          setTree(data.tree);
-          setLastSynced(data.timestamp);
+      } else {
+        if (pollTimer.current) {
+          window.clearInterval(pollTimer.current);
+          pollTimer.current = null;
         }
+        // Always try to load if not scanning (ensures sync)
+        loadCache();
       }
     } catch (e) { /* ignore */ }
   };
+
+  const loadCache = async () => {
+    try {
+      const data = await getTree();
+      if (data && data.tree) {
+        setTree(data.tree);
+        setLastSynced(data.timestamp);
+        if (data.path) setInputPath(data.path);
+      }
+    } catch (err) { /* ignore */ }
+  };
+
+  useEffect(() => {
+    checkScanningStatus();
+    return () => {
+      if (pollTimer.current) window.clearInterval(pollTimer.current);
+    }
+  }, []);
 
   const handleFullScan = async () => {
     try {
