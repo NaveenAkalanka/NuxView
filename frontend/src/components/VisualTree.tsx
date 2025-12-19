@@ -92,7 +92,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-    const { fitView } = useReactFlow();
+    const { fitView, getEdges } = useReactFlow();
     const dragStartPos = useRef<{ x: number; y: number } | null>(null);
 
     const handleContextMenu = useCallback((event: React.MouseEvent, nodeData: any) => {
@@ -101,13 +101,12 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
     }, []);
 
     const handleExpand = useCallback(async (id: string, path: string) => {
-        // Check if children already exist in edges
-        const hasChildren = edges.some(e => e.source === id);
+        const currentEdges = getEdges();
+        const hasChildren = currentEdges.some(e => e.source === id);
 
         if (hasChildren) {
-            // Toggle visibility of children recursively
             const toggleSubtree = (parentId: string, visible: boolean) => {
-                const childIds = edges.filter(e => e.source === parentId).map(e => e.target);
+                const childIds = getEdges().filter(e => e.source === parentId).map(e => e.target);
                 setNodes(nds => nds.map(n => childIds.includes(n.id) ? { ...n, hidden: !visible } : n));
                 setEdges(eds => eds.map(e => childIds.includes(e.target) && e.source === parentId ? { ...e, hidden: !visible } : e));
                 if (!visible) childIds.forEach(cid => toggleSubtree(cid, false));
@@ -124,27 +123,25 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
             return;
         }
 
-        // Fetch children from API
         try {
             const newNode = await scanNode(path);
             if (newNode && newNode.children) {
+                const childNodes: Node[] = newNode.children!.map(child => ({
+                    id: child.path,
+                    type: 'folder',
+                    position: { x: 0, y: 0 },
+                    data: { id: child.path, label: child.name, fullPath: child.path, isExpanded: false, onExpand: handleExpand, onContextMenu: handleContextMenu }
+                }));
+
                 setNodes(nds => {
                     const updatedNds = nds.map(n => n.id === id ? { ...n, data: { ...n.data, isExpanded: true } } : n);
-                    const newNodes: Node[] = newNode.children!.map(child => ({
-                        id: child.path,
-                        type: 'folder',
-                        position: { x: 0, y: 0 },
-                        data: { id: child.path, label: child.name, fullPath: child.path, isExpanded: false, onExpand: handleExpand, onContextMenu: handleContextMenu }
-                    }));
-                    return [...updatedNds, ...newNodes];
+                    return [...updatedNds, ...childNodes];
                 });
+
                 setEdges(eds => {
-                    const newEdges: Edge[] = newNode.children!.map(child => ({
-                        id: `${id}-${child.path}`,
-                        source: id,
-                        target: child.path,
-                        type: 'smoothstep',
-                        animated: true
+                    const newEdges: Edge[] = childNodes.map(child => ({
+                        id: `${id}-${child.id}`, source: id, target: child.id,
+                        type: 'smoothstep', animated: true
                     }));
                     return [...eds, ...newEdges];
                 });
@@ -152,7 +149,7 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
         } catch (err) {
             console.error("Expand failed", err);
         }
-    }, [edges, handleContextMenu, setEdges, setNodes]);
+    }, [getEdges, handleContextMenu, setEdges, setNodes]);
 
     const lastPath = useRef<string | null>(null);
 
