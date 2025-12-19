@@ -1,65 +1,105 @@
 import os
 import logging
-from typing import List, Optional, Set
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from typing import List, Optional, Dict, Any
 from models import FileNode
 
 logger = logging.getLogger("nuxview.scanner")
 
-DEFAULT_EXCLUDES = {"proc", "sys", "dev", "run", "tmp", "var/lib/docker", "lost+found"}
+DEFAULT_EXCLUDES = {"proc", "sys", "dev", "run", "tmp", "var/lib/docker", "lost+found", ".git", "node_modules"}
 
-def scan_directory(
+class ScanStatus:
+    def __init__(self):
+        self.is_scanning = False
+        self.progress = 0
+        self.total_dirs = 0
+        self.scanned_dirs = 0
+        self.error = None
+        self._lock = threading.Lock()
+
+    def update(self, **kwargs):
+        with self._lock:
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+            if self.total_dirs > 0:
+                self.progress = int((self.scanned_dirs / self.total_dirs) * 100)
+
+global_scan_status = ScanStatus()
+
+def scan_directory_parallel(
     root_path: str, 
-    max_depth: Optional[int] = None, 
+    max_depth: int = 50,
     excludes: Optional[List[str]] = None
 ) -> Optional[FileNode]:
     """
-    Scans a directory recursively and returns a FileNode tree.
-    Only includes directories. Skips symlinks and excluded names.
+    Parallel directory scanner using ThreadPoolExecutor.
     """
     root_path = os.path.abspath(root_path)
-    
     exclude_set = set(DEFAULT_EXCLUDES)
     if excludes:
         exclude_set.update(excludes)
 
-    def _scan(current_path: str, current_depth: int) -> Optional[FileNode]:
-        if max_depth is not None and current_depth > max_depth:
-            return None
-        
-        name = os.path.basename(current_path)
-        if not name: 
-            # Handle root being "/" or "C:\"
-            name = current_path
-        
-        # Check against excludes (simple name check)
-        if name in exclude_set:
-            return None
+    global_scan_status.update(is_scanning=True, progress=0, scanned_dirs=0, total_dirs=1, error=None)
 
-        node = FileNode(name=name, path=current_path, children=[])
-        
+    def _scan_immediate(path: str) -> List[str]:
+        """Returns list of sub-directory paths."""
         try:
-            with os.scandir(current_path) as it:
-                entries = sorted(list(it), key=lambda x: x.name.lower())
-                for entry in entries:
-                    if entry.name in exclude_set:
-                        continue
-                    if entry.is_symlink():
-                        continue
-                    if not entry.is_dir():
-                        continue
-                    
-                    # Recursion
-                    child_node = _scan(entry.path, current_depth + 1)
+            with os.scandir(path) as it:
+                return [entry.path for entry in it 
+                        if entry.is_dir() and not entry.is_symlink() and entry.name not in exclude_set]
+        except (PermissionError, OSError):
+            return []
+
+    # Map of path -> FileNode
+    tree_map: Dict[str, FileNode] = {}
+    tree_lock = threading.Lock()
+
+    def _worker(path: str, depth: number):
+        if depth > max_depth:
+            return
+
+        name = os.path.basename(path) or path
+        node = FileNode(name=name, path=path, children=[])
+        
+        with tree_lock:
+            tree_map[path] = node
+
+        sub_paths = _scan_immediate(path)
+        if sub_paths:
+            with global_scan_status._lock:
+                global_scan_status.total_dirs += len(sub_paths)
+
+            # Parallelize children if depth is low (avoid too many tiny tasks)
+            if depth < 3:
+                with ThreadPoolExecutor(max_workers=8) as executor:
+                    futures = [executor.submit(_worker, sp, depth + 1) for sp in sub_paths]
+                    for f in futures:
+                        child_node = f.result()
+                        if child_node:
+                            node.children.append(child_node)
+            else:
+                for sp in sub_paths:
+                    child_node = _worker(sp, depth + 1)
                     if child_node:
-                        if node.children is None:
-                            node.children = []
                         node.children.append(child_node)
 
-        except PermissionError:
-            logger.warning(f"Permission denied: {current_path}")
-        except Exception as e:
-            logger.error(f"Error scanning {current_path}: {e}")
-
+        with global_scan_status._lock:
+            global_scan_status.scanned_dirs += 1
+            if global_scan_status.total_dirs > 0:
+                global_scan_status.progress = int((global_scan_status.scanned_dirs / global_scan_status.total_dirs) * 100)
+        
         return node
 
-    return _scan(root_path, 0)
+    try:
+        root_node = _worker(root_path, 0)
+        global_scan_status.update(is_scanning=False, progress=100)
+        return root_node
+    except Exception as e:
+        logger.error(f"Parallel scan failed: {e}")
+        global_scan_status.update(is_scanning=False, error=str(e))
+        return None
+
+# Keep compatible signature for legacy calls if needed
+def scan_directory(root_path, max_depth=5, excludes=None):
+    return scan_directory_parallel(root_path, max_depth, excludes)

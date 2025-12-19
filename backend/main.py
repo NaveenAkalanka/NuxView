@@ -2,12 +2,12 @@ import os
 import json
 import logging
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-from scanner import scan_directory
+from scanner import scan_directory_parallel, global_scan_status
 from models import FileNode
 
 # Config
@@ -47,44 +47,54 @@ class ScanRequest(BaseModel):
     max_depth: Optional[int] = 3 # Lower default for speed
     excludes: Optional[List[str]] = []
 
-@app.post("/api/scan")
-def scan(req: ScanRequest):
+@app.post("/api/scan/full")
+def scan_full(req: ScanRequest, background_tasks: BackgroundTasks):
+    """Starts a full parallel scan in the background."""
+    if global_scan_status.is_scanning:
+        return {"status": "already_scanning", "progress": global_scan_status.progress}
+
     if not os.path.exists(req.path):
         raise HTTPException(status_code=404, detail=f"Path not found: {req.path}")
-    
-    # User requested 'full' so let's bump default significantly if they didn't specify
-    # But UI will handle the simplified view. 
-    # Use 50 as 'practically infinite' for most systems without crashing recursion limit.
-    depth = req.max_depth if req.max_depth is not None else 50
-    
-    logger.info(f"Scanning {req.path} with max_depth={depth}")
-    try:
-        tree = scan_directory(req.path, depth, req.excludes)
-    except Exception as e:
-        logger.error(f"Scan failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    
-    if not tree:
-         # Could be excluded or empty
-         pass
-            
-    import time
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    
-    # Save with metadata
-    save_data = {
-        "timestamp": timestamp,
-        "path": req.path,
-        "tree": tree.model_dump()
+
+    def background_scan():
+        logger.info(f"Starting background full scan for {req.path}")
+        tree = scan_directory_parallel(req.path, req.max_depth or 50, req.excludes)
+        if tree:
+            import time
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            save_data = {
+                "timestamp": timestamp,
+                "path": req.path,
+                "tree": tree.model_dump()
+            }
+            try:
+                if not DATA_DIR.exists():
+                    DATA_DIR.mkdir(parents=True, exist_ok=True)
+                with open(TREE_FILE, "w") as f:
+                    json.dump(save_data, f, indent=2)
+                logger.info("Background scan completed and saved.")
+            except Exception as e:
+                logger.error(f"Failed to save background scan: {e}")
+
+    background_tasks.add_task(background_scan)
+    return {"status": "started"}
+
+@app.get("/api/scan/status")
+def get_scan_status():
+    """Returns the current background scan progress."""
+    return {
+        "is_scanning": global_scan_status.is_scanning,
+        "progress": global_scan_status.progress,
+        "scanned": global_scan_status.scanned_dirs,
+        "total": global_scan_status.total_dirs,
+        "error": global_scan_status.error
     }
-    
-    try:
-        with open(TREE_FILE, "w") as f:
-            json.dump(save_data, f, indent=2)
-    except Exception as e:
-        logger.error(f"Failed to save tree file: {e}")
-        
-    return {"status": "success", "tree": tree, "timestamp": timestamp}
+
+@app.post("/api/scan")
+def scan(req: ScanRequest):
+    # Keep legacy for shallow scans if needed, but point to parallel
+    tree = scan_directory_parallel(req.path, req.max_depth or 3, req.excludes)
+    return {"status": "success", "tree": tree}
 
 @app.post("/api/scan/node")
 def scan_node(req: ScanRequest):

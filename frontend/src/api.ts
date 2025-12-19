@@ -29,6 +29,16 @@ export const scanNode = async (path: string, excludes: string[] = []) => {
   return res.data.node;
 };
 
+export const startFullScan = async (path: string, maxDepth: number = 50, excludes: string[] = []) => {
+  const res = await api.post<{ status: string }>('/api/scan/full', { path, max_depth: maxDepth, excludes });
+  return res.data;
+};
+
+export const getScanStatus = async () => {
+  const res = await api.get<{ is_scanning: boolean; progress: number; scanned: number; total: number; error: string | null }>('/api/scan/status');
+  return res.data;
+};
+
 export const getTree = async () => {
   const res = await api.get<{ tree: FileNode; timestamp: string; path: string }>('/api/tree');
   return res.data;
