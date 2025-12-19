@@ -121,18 +121,6 @@ def get_tree():
             with open(TREE_FILE, "r") as f:
                 data = json.load(f)
             
-            # Return root and its immediate children (Level 1 only)
-            root_data = data.get("tree", {})
-            shallow_children = []
-            if "children" in root_data and root_data["children"]:
-                for child in root_data["children"]:
-                    shallow_children.append({
-                        "name": child.get("name"),
-                        "path": child.get("path"),
-                        "type": "directory",
-                        "children": []
-                    })
-
             return {
                 "status": "success",
                 "timestamp": data.get("timestamp"),
@@ -141,7 +129,7 @@ def get_tree():
                     "name": root_data.get("name"),
                     "path": root_data.get("path"),
                     "type": "directory",
-                    "children": shallow_children
+                    "children": [] # Root only, no children
                 }
             }
         except Exception as e:

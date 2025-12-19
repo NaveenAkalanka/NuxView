@@ -9,8 +9,8 @@ interface TreeItemProps {
 }
 
 const TreeItem: React.FC<TreeItemProps> = ({ node, depth }) => {
-    // Root starts open by default
-    const [isOpen, setIsOpen] = useState(depth === 0);
+    // Start collapsed by default
+    const [isOpen, setIsOpen] = useState(false);
     // Use existing children if provided (Level 1 in root)
     const [children, setChildren] = useState<FileNode[]>(node.children || []);
     const [loading, setLoading] = useState(false);
