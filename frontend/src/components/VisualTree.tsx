@@ -219,41 +219,46 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
     const lastPath = useRef<string | null>(null);
 
     useEffect(() => {
-        if (data.path === lastPath.current && data.children === undefined) return;
+        if (data.path === lastPath.current) return;
         lastPath.current = data.path;
 
         const initialNodes: Node[] = [];
         const initialEdges: Edge[] = [];
 
-        const flatten = (node: FileNode, depth: number, parentId: string | null) => {
-            const id = node.path;
-            const hasChildren = node.children && node.children.length > 0;
+        // Flatten Level 0 (Root)
+        const rootId = data.path;
+        initialNodes.push({
+            id: rootId, type: 'folder',
+            data: {
+                id: rootId, label: data.name || '/', fullPath: data.path,
+                depth: 0, isExpanded: data.children ? data.children.length > 0 : false,
+                onExpand: handleExpand, onContextMenu: handleContextMenu
+            },
+            position: { x: 0, y: 0 }
+        });
 
-            initialNodes.push({
-                id, type: 'folder',
-                data: {
-                    id, label: node.name || '/', fullPath: node.path,
-                    depth, isExpanded: hasChildren,
-                    onExpand: handleExpand, onContextMenu: handleContextMenu
-                },
-                position: { x: 0, y: 0 }
-            });
+        // Flatten Level 1 (Immediate Children)
+        if (data.children) {
+            data.children.forEach(child => {
+                const childId = child.path;
+                initialNodes.push({
+                    id: childId, type: 'folder',
+                    data: {
+                        id: childId, label: child.name, fullPath: child.path,
+                        depth: 1, isExpanded: false,
+                        onExpand: handleExpand, onContextMenu: handleContextMenu
+                    },
+                    position: { x: 0, y: 0 }
+                });
 
-            if (parentId) {
-                const parentColor = getFolderColor(node.path, depth - 1);
+                const parentColor = getFolderColor(data.path, 0);
                 initialEdges.push({
-                    id: `${parentId}-${id}`, source: parentId, target: id,
+                    id: `${rootId}-${childId}`, source: rootId, target: childId,
                     type: 'smoothstep', animated: true,
                     style: { stroke: parentColor, strokeWidth: 2, opacity: 0.6 }
                 });
-            }
-
-            if (node.children) {
-                node.children.forEach(child => flatten(child, depth + 1, id));
-            }
-        };
-
-        flatten(data, 0, null);
+            });
+        }
 
         const { nodes: lNodes, edges: lEdges } = getLayoutedElements(initialNodes, initialEdges);
 
