@@ -157,23 +157,27 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
     useEffect(() => {
         const initialNodes: Node[] = [];
         const initialEdges: Edge[] = [];
-        const flattenTree = (node: FileNode, parentId: string | null = null, depth: number = 0) => {
-            const id = node.path;
-            initialNodes.push({
-                id, type: 'folder',
-                data: { id, label: node.name || '/', fullPath: node.path, depth, isExpanded: node.children && node.children.length > 0, onExpand: handleExpand, onContextMenu: handleContextMenu },
-                position: { x: 0, y: 0 }
-            });
-            if (parentId) {
-                initialEdges.push({ id: `${parentId}-${id}`, source: parentId, target: id, type: 'smoothstep', animated: true });
-            }
-            node.children?.forEach(child => flattenTree(child, id, depth + 1));
-        };
-        flattenTree(data);
-        const { nodes: lNodes, edges: lEdges } = getLayoutedElements(initialNodes, initialEdges);
-        setNodes(lNodes);
-        setEdges(lEdges);
-        setTimeout(() => fitView({ nodes: [{ id: data.path }], duration: 800, padding: 2 }), 100);
+
+        // Single level initial load
+        const id = data.path;
+        initialNodes.push({
+            id, type: 'folder',
+            data: {
+                id,
+                label: data.name || '/',
+                fullPath: data.path,
+                depth: 0,
+                isExpanded: false, // Force false to start clean
+                onExpand: handleExpand,
+                onContextMenu: handleContextMenu
+            },
+            position: { x: 0, y: 0 }
+        });
+
+        setNodes(initialNodes);
+        setEdges(initialEdges);
+        // Instant snap to root
+        setTimeout(() => fitView({ nodes: [{ id: data.path }], duration: 400, padding: 2 }), 50);
     }, [data, handleExpand, handleContextMenu, fitView, setNodes, setEdges]);
 
     // Subtree dragging logic

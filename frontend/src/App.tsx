@@ -48,8 +48,8 @@ function App() {
   const loadCache = async () => {
     try {
       const data = await getTree();
-      if (data && data.tree) {
-        setTree(data.tree);
+      if (data && data.root) {
+        setTree(data.root);
         setLastSynced(data.timestamp);
         if (data.path) setInputPath(data.path);
       }

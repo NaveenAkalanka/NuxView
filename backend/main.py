@@ -114,13 +114,27 @@ def scan_node(req: ScanRequest):
 
 @app.get("/api/tree")
 def get_tree():
+    """Returns only the root/top-level of the cached tree to prevent UI hangs."""
     if not TREE_FILE.exists():
         return {"status": "error", "detail": "No scan yet"}
     
     try:
         with open(TREE_FILE, "r") as f:
             data = json.load(f)
-        return data
+        
+        # Return only metadata and root node info, strip children for speed
+        root_data = data.get("tree", {})
+        return {
+            "status": "success",
+            "timestamp": data.get("timestamp"),
+            "path": data.get("path"),
+            "root": {
+                "name": root_data.get("name"),
+                "path": root_data.get("path"),
+                "type": "directory",
+                "has_children": len(root_data.get("children", [])) > 0
+            }
+        }
     except Exception as e:
         logger.error(f"Failed to read tree file: {e}")
         raise HTTPException(status_code=500, detail="Failed to load tree")
