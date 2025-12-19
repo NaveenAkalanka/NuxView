@@ -76,28 +76,43 @@ def scan_with_find(root_path: str, max_depth: int = 50, excludes: Optional[List[
     logger.info(f"Executing shell scan: {' '.join(command)}")
     
     try:
-        # Run find command and capture output
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        # Merge stderr into stdout to prevent buffer deadlocks
+        # Also use -noleaf for minor speed boost on some FS, and skip hidden by default
+        command = [
+            "find", root_path,
+            "-maxdepth", str(max_depth),
+            "-type", "d"
+        ] + exclude_args
+
+        process = subprocess.Popen(
+            command, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.DEVNULL, # Ignore permission denied spam
+            text=True,
+            bufsize=1 # Line buffered
+        )
+        
         paths = []
+        global_scan_status.update(progress=10)
         
-        global_scan_status.update(progress=10) # Initial progress
+        # Read paths
+        for line in process.stdout:
+            p = line.strip()
+            if p:
+                paths.append(p)
+                if len(paths) % 500 == 0:
+                     # More granular progress: 10% to 85%
+                     global_scan_status.update(progress=min(85, 10 + (len(paths) // 500)))
         
-        while True:
-            line = process.stdout.readline()
-            if not line and process.poll() is not None:
-                break
-            if line:
-                paths.append(line.strip())
-                # Update progress roughly as we find nodes
-                if len(paths) % 1000 == 0:
-                     global_scan_status.update(progress=min(90, 10 + (len(paths) // 1000)))
+        process.wait()
         
-        if process.returncode != 0 and process.returncode is not None:
-            stderr = process.stderr.read()
-            logger.error(f"Find command failed: {stderr}")
-            # Permissions errors are common, we usually ignore them unless it's critical
-        
-        global_scan_status.update(progress=95)
+        if not paths:
+            logger.warning("Find command returned no paths.")
+            global_scan_status.update(is_scanning=False, error="No directories found.")
+            return None
+
+        global_scan_status.update(progress=90)
+        logger.info(f"Parsing {len(paths)} paths into tree...")
         tree = paths_to_tree(paths, root_path)
         global_scan_status.update(is_scanning=False, progress=100)
         return tree
