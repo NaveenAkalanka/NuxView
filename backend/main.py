@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-from scanner import scan_directory_parallel, global_scan_status
+from scanner import scan_directory_parallel, scan_directory, global_scan_status
 from models import FileNode
 
 # Config
