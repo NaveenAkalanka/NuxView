@@ -208,7 +208,19 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
             >
                 Re-align Layout
             </button>
-            <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} nodeTypes={nodeTypes} onNodeDragStart={onNodeDragStart} onNodeDrag={onNodeDrag} fitView snapToGrid snapGrid={[15, 15]}>
+            <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                nodeTypes={nodeTypes}
+                onNodeDragStart={onNodeDragStart}
+                onNodeDrag={onNodeDrag}
+                fitView
+                snapToGrid
+                snapGrid={[15, 15]}
+                onlyRenderVisibleElements={true}
+            >
                 <Background color="#333" gap={20} /><Controls /><MiniMap nodeStrokeWidth={3} zoomable pannable />
             </ReactFlow>
         </div>

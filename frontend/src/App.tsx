@@ -10,6 +10,7 @@ function App() {
   const [inputPath, setInputPath] = useState('/');
   const [error, setError] = useState<string | null>(null);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [deepScan, setDeepScan] = useState(false);
 
   // Auto-load cache on mount
   useEffect(() => {
@@ -32,7 +33,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const data = await scanPath(inputPath);
+      const data = await scanPath(inputPath, deepScan ? 3 : 1);
       setTree(data);
       setLastSynced(new Date().toLocaleString()); // Refresh local time
     } catch (err: any) {
@@ -53,18 +54,24 @@ function App() {
               Interactive Linux File Explorer {lastSynced && `• Last Synced: ${lastSynced}`}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <input
-              className="input"
-              value={inputPath}
-              onChange={(e) => setInputPath(e.target.value)}
-              placeholder="/etc or /home..."
-              style={{ width: '300px' }}
-              onKeyDown={(e) => e.key === 'Enter' && performScan()}
-            />
-            <button className="button" onClick={performScan} disabled={loading}>
-              {loading ? 'Scanning...' : 'Scan Path'}
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                className="input"
+                value={inputPath}
+                onChange={(e) => setInputPath(e.target.value)}
+                placeholder="/etc or /home..."
+                style={{ width: '300px' }}
+                onKeyDown={(e) => e.key === 'Enter' && performScan()}
+              />
+              <button className="button" onClick={performScan} disabled={loading}>
+                {loading ? 'Scanning...' : 'Scan Path'}
+              </button>
+            </div>
+            <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', alignSelf: 'flex-end', opacity: 0.8 }}>
+              <input type="checkbox" checked={deepScan} onChange={(e) => setDeepScan(e.target.checked)} />
+              Deep Scan (Depth 3)
+            </label>
           </div>
         </div>
       </div>
