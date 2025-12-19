@@ -44,7 +44,7 @@ const getFolderColor = (path: string, depth: number) => {
 };
 
 const FolderNode = ({ data }: NodeProps) => {
-    const color = getFolderColor(data.fullPath as string, Number(data.depth) || 0);
+    const color = getFolderColor(String(data.fullPath), Number(data.depth) || 0);
     const isExpanded = data.isExpanded as boolean;
     const onExpand = data.onExpand as (id: string, path: string) => void;
 
@@ -53,12 +53,12 @@ const FolderNode = ({ data }: NodeProps) => {
             <Handle type="target" position={Position.Top} style={{ background: color }} />
             <div className="folder-node-content" style={{ paddingRight: '24px' }}>
                 <Folder size={14} style={{ color }} />
-                <span className="folder-name" title={data.fullPath as string}>{data.label as string}</span>
+                <span className="folder-name" title={String(data.fullPath)}>{String(data.label)}</span>
             </div>
 
             {/* Expand/Collapse Button */}
             <button
-                onClick={(e) => { e.stopPropagation(); onExpand(data.id as string, data.fullPath as string); }}
+                onClick={(e) => { e.stopPropagation(); onExpand(data.id as string, String(data.fullPath)); }}
                 style={{
                     position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
                     background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '4px',
@@ -138,13 +138,15 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
     }, []);
 
     const handleExpand = useCallback(async (id: string, path: string) => {
+        const currentNodes = getNodes();
         const currentEdges = getEdges();
-        const node = getNodes().find(n => n.id === id);
-        const depth = node?.data.depth || 0;
+        const node = currentNodes.find(n => n.id === id);
+        if (!node) return;
 
-        const hasChildren = currentEdges.some(e => e.source === id);
+        const depth = node.data.depth || 0;
+        const hasChildrenInTree = currentEdges.some(e => e.source === id);
 
-        if (hasChildren) {
+        if (hasChildrenInTree) {
             const toggleSubtree = (parentId: string, visible: boolean, eds: Edge[]) => {
                 const childIds = eds.filter(e => e.source === parentId).map(e => e.target);
                 setNodes(nds => nds.map(n => childIds.includes(n.id) ? { ...n, hidden: !visible } : n));
@@ -152,99 +154,110 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
                 if (!visible) childIds.forEach(cid => toggleSubtree(cid, false, eds));
             };
 
-            setNodes(nds => {
-                const nextNodes = nds.map(n => {
-                    if (n.id === id) {
-                        const nextState = !n.data.isExpanded;
-                        toggleSubtree(id, nextState, getEdges());
-                        return { ...n, data: { ...n.data, isExpanded: nextState } };
-                    }
-                    return n;
-                });
-                const { nodes: lNodes, edges: lEdges } = getLayoutedElements(nextNodes, getEdges());
-                setEdges(lEdges);
-                return lNodes;
-            });
+            const nextState = !node.data.isExpanded;
+            setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, isExpanded: nextState } } : n));
+            toggleSubtree(id, nextState, currentEdges);
             return;
         }
 
         try {
             const newNode = await scanNode(path);
             if (newNode && newNode.children) {
-                const childNodes: Node[] = newNode.children!.map(child => ({
-                    id: child.path,
-                    type: 'folder',
-                    position: getPersistedPos(child.path) || { x: 0, y: 0 },
-                    data: {
-                        id: child.path, label: child.name, fullPath: child.path,
-                        depth: (Number(depth) || 0) + 1, isExpanded: false,
-                        onExpand: handleExpand, onContextMenu: handleContextMenu
-                    }
-                }));
+                const px = node.position.x;
+                const py = node.position.y;
 
-                const newEdges: Edge[] = childNodes.map(child => ({
-                    id: `${id}-${child.id}`, source: id, target: child.id,
-                    type: 'smoothstep', animated: true
-                }));
+                const childNodes: Node[] = newNode.children!.map((child, index) => {
+                    const persisted = getPersistedPos(child.path);
+                    return {
+                        id: child.path,
+                        type: 'folder',
+                        position: persisted || { x: px + (index - (newNode.children!.length - 1) / 2) * 160, y: py + 100 },
+                        data: {
+                            id: child.path, label: child.name, fullPath: child.path,
+                            depth: (Number(depth) || 0) + 1, isExpanded: false,
+                            onExpand: handleExpand, onContextMenu: handleContextMenu
+                        }
+                    };
+                });
+
+                const newEdges: Edge[] = childNodes.map(child => {
+                    const parentColor = getFolderColor(String(node.data.fullPath), Number(node.data.depth));
+                    return {
+                        id: `${id}-${child.id}`, source: id, target: child.id,
+                        type: 'smoothstep', animated: true,
+                        style: { stroke: parentColor, strokeWidth: 2, opacity: 0.6 }
+                    };
+                });
 
                 setNodes(nds => {
                     const updatedNds = nds.map(n => n.id === id ? { ...n, data: { ...n.data, isExpanded: true } } : n);
-                    const allNodes = [...updatedNds, ...childNodes];
-                    const allEdges = [...getEdges(), ...newEdges];
-                    const { nodes: lNodes, edges: lEdges } = getLayoutedElements(allNodes, allEdges);
-                    setEdges(lEdges);
-                    return lNodes;
+                    return [...updatedNds, ...childNodes];
                 });
+                setEdges(eds => [...eds, ...newEdges]);
+                savePositions(childNodes);
             }
         } catch (err) {
             console.error("Expand failed", err);
         }
-    }, [getEdges, getNodes, handleContextMenu, setEdges, setNodes]);
+    }, [getEdges, getNodes, handleContextMenu, setEdges, setNodes, getPersistedPos, savePositions]);
+
+    const expandAll = useCallback(async () => {
+        const folders = getNodes().filter(n => !n.data.isExpanded && !n.hidden);
+        for (const f of folders) {
+            await handleExpand(f.id, String(f.data.fullPath));
+        }
+    }, [getNodes, handleExpand]);
+
+    const collapseAll = useCallback(() => {
+        setNodes(nds => nds.map(n => {
+            const isRoot = n.data.depth === 0;
+            return { ...n, hidden: !isRoot, data: { ...n.data, isExpanded: isRoot } };
+        }));
+        setEdges(eds => eds.map(e => ({ ...e, hidden: true })));
+    }, [setNodes, setEdges]);
 
     const lastPath = useRef<string | null>(null);
 
     useEffect(() => {
-        if (data.path === lastPath.current) return;
+        if (data.path === lastPath.current && data.children === undefined) return;
         lastPath.current = data.path;
 
         const initialNodes: Node[] = [];
         const initialEdges: Edge[] = [];
 
-        // Flatten Level 0 (Root)
-        const rootId = data.path;
-        initialNodes.push({
-            id: rootId, type: 'folder',
-            data: {
-                id: rootId, label: data.name || '/', fullPath: data.path,
-                depth: 0, isExpanded: data.children ? data.children.length > 0 : false,
-                onExpand: handleExpand, onContextMenu: handleContextMenu
-            },
-            position: { x: 0, y: 0 }
-        });
+        const flatten = (node: FileNode, depth: number, parentId: string | null) => {
+            const id = node.path;
+            const hasChildren = node.children && node.children.length > 0;
 
-        // Flatten Level 1 (Immediate Children)
-        if (data.children) {
-            data.children.forEach(child => {
-                const childId = child.path;
-                initialNodes.push({
-                    id: childId, type: 'folder',
-                    data: {
-                        id: childId, label: child.name, fullPath: child.path,
-                        depth: 1, isExpanded: false,
-                        onExpand: handleExpand, onContextMenu: handleContextMenu
-                    },
-                    position: { x: 0, y: 0 }
-                });
-                initialEdges.push({
-                    id: `${rootId}-${childId}`, source: rootId, target: childId,
-                    type: 'smoothstep', animated: true
-                });
+            initialNodes.push({
+                id, type: 'folder',
+                data: {
+                    id, label: node.name || '/', fullPath: node.path,
+                    depth, isExpanded: hasChildren,
+                    onExpand: handleExpand, onContextMenu: handleContextMenu
+                },
+                position: { x: 0, y: 0 }
             });
-        }
+
+            if (parentId) {
+                const parentColor = getFolderColor(node.path, depth - 1);
+                initialEdges.push({
+                    id: `${parentId}-${id}`, source: parentId, target: id,
+                    type: 'smoothstep', animated: true,
+                    style: { stroke: parentColor, strokeWidth: 2, opacity: 0.6 }
+                });
+            }
+
+            if (node.children) {
+                node.children.forEach(child => flatten(child, depth + 1, id));
+            }
+        };
+
+        flatten(data, 0, null);
 
         const { nodes: lNodes, edges: lEdges } = getLayoutedElements(initialNodes, initialEdges);
 
-        // Apply persisted positions if available
+        // Apply persisted positions
         const persistedNodes = lNodes.map(n => {
             const pos = getPersistedPos(n.id);
             return pos ? { ...n, position: pos } : n;
@@ -252,8 +265,8 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
 
         setNodes(persistedNodes);
         setEdges(lEdges);
-        setTimeout(() => fitView({ duration: 400, padding: 2 }), 50);
-    }, [data.path, data.name, data.children, handleExpand, handleContextMenu, fitView, setNodes, setEdges, getPersistedPos]);
+        setTimeout(() => fitView({ duration: 400, padding: 2 }), 100);
+    }, [data, handleExpand, handleContextMenu, fitView, setNodes, setEdges, getPersistedPos]);
 
     const applyLayout = useCallback(() => {
         const { nodes: lNodes, edges: lEdges } = getLayoutedElements(nodes, edges);
@@ -270,7 +283,8 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
         const dy = node.position.y - dragStartPos.current.y;
         dragStartPos.current = { ...node.position };
         const findDescendants = (parentId: string): string[] => {
-            const children = edges.filter(e => e.source === parentId).map(e => e.target);
+            const edgs = getEdges();
+            const children = edgs.filter(e => e.source === parentId).map(e => e.target);
             return children.reduce((acc, child) => [...acc, child, ...findDescendants(child)], [] as string[]);
         };
         const descendants = findDescendants(node.id);
@@ -288,12 +302,26 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
 
     return (
         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-            <button
-                onClick={applyLayout}
-                style={{ position: 'absolute', top: 10, left: 10, zIndex: 10, background: 'var(--primary-color)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-            >
-                Re-align Layout
-            </button>
+            <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 10, display: 'flex', gap: '8px' }}>
+                <button
+                    onClick={applyLayout}
+                    style={{ background: 'var(--primary-color)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                >
+                    Re-align Layout
+                </button>
+                <button
+                    onClick={expandAll}
+                    style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                >
+                    Expand All
+                </button>
+                <button
+                    onClick={collapseAll}
+                    style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                >
+                    Collapse All
+                </button>
+            </div>
             <ReactFlow
                 nodes={nodes}
                 edges={edges}

@@ -121,28 +121,36 @@ def get_tree():
             with open(TREE_FILE, "r") as f:
                 data = json.load(f)
             
-            # Return root and its immediate children (Level 1 only)
-            root_data = data.get("tree", {})
-            shallow_children = []
-            if "children" in root_data and root_data["children"]:
-                for child in root_data["children"]:
-                    shallow_children.append({
-                        "name": child.get("name"),
-                        "path": child.get("path"),
+            # Return root and its nested children up to Depth 3
+            def get_shallow_tree(node, current_depth, max_depth=3):
+                if current_depth >= max_depth:
+                    return {
+                        "name": node.get("name"),
+                        "path": node.get("path"),
                         "type": "directory",
                         "children": []
-                    })
+                    }
+                
+                children = []
+                if "children" in node and node["children"]:
+                    for child in node["children"]:
+                        children.append(get_shallow_tree(child, current_depth + 1, max_depth))
+                
+                return {
+                    "name": node.get("name"),
+                    "path": node.get("path"),
+                    "type": "directory",
+                    "children": children
+                }
+
+            root_data = data.get("tree", {})
+            deep_root = get_shallow_tree(root_data, 0, max_depth=3)
 
             return {
                 "status": "success",
                 "timestamp": data.get("timestamp"),
                 "path": data.get("path"),
-                "root": {
-                    "name": root_data.get("name"),
-                    "path": root_data.get("path"),
-                    "type": "directory",
-                    "children": shallow_children
-                }
+                "root": deep_root
             }
         except Exception as e:
             logger.error(f"Cache broken: {e}. Falling back to live...")
