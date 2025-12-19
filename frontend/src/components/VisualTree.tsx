@@ -154,11 +154,15 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
         }
     }, [edges, handleContextMenu, setEdges, setNodes]);
 
+    const lastPath = useRef<string | null>(null);
+
     useEffect(() => {
+        if (data.path === lastPath.current) return;
+        lastPath.current = data.path;
+
         const initialNodes: Node[] = [];
         const initialEdges: Edge[] = [];
 
-        // Single level initial load
         const id = data.path;
         initialNodes.push({
             id, type: 'folder',
@@ -167,7 +171,7 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
                 label: data.name || '/',
                 fullPath: data.path,
                 depth: 0,
-                isExpanded: false, // Force false to start clean
+                isExpanded: false,
                 onExpand: handleExpand,
                 onContextMenu: handleContextMenu
             },
@@ -176,9 +180,8 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
 
         setNodes(initialNodes);
         setEdges(initialEdges);
-        // Instant snap to root
         setTimeout(() => fitView({ nodes: [{ id: data.path }], duration: 400, padding: 2 }), 50);
-    }, [data, handleExpand, handleContextMenu, fitView, setNodes, setEdges]);
+    }, [data.path, data.name, handleExpand, handleContextMenu, fitView, setNodes, setEdges]);
 
     // Subtree dragging logic
     const onNodeDragStart = (_: any, node: Node) => { dragStartPos.current = { ...node.position }; };

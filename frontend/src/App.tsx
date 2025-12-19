@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { scanPath, getTree, startFullScan, getScanStatus } from './api';
 import type { FileNode } from './api';
 import { VisualTree } from './components/VisualTree';
@@ -15,7 +15,18 @@ function App() {
 
   const pollTimer = useRef<number | null>(null);
 
-  const checkScanningStatus = async () => {
+  const loadCache = useCallback(async () => {
+    try {
+      const data = await getTree();
+      if (data && data.root) {
+        setTree(data.root);
+        setLastSynced(data.timestamp);
+        if (data.path) setInputPath(data.path);
+      }
+    } catch (err) { /* ignore */ }
+  }, []);
+
+  const checkScanningStatus = useCallback(async () => {
     try {
       const status = await getScanStatus();
       setIsScanning(status.is_scanning);
@@ -38,25 +49,15 @@ function App() {
         if (pollTimer.current) {
           window.clearInterval(pollTimer.current);
           pollTimer.current = null;
+          loadCache();
         }
-        // Always try to load if not scanning (ensures sync)
-        loadCache();
       }
     } catch (e) { /* ignore */ }
-  };
-
-  const loadCache = async () => {
-    try {
-      const data = await getTree();
-      if (data && data.root) {
-        setTree(data.root);
-        setLastSynced(data.timestamp);
-        if (data.path) setInputPath(data.path);
-      }
-    } catch (err) { /* ignore */ }
-  };
+  }, [loadCache]);
 
   useEffect(() => {
+    // Initial load
+    loadCache();
     checkScanningStatus();
     return () => {
       if (pollTimer.current) window.clearInterval(pollTimer.current);
@@ -87,7 +88,7 @@ function App() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: '100%', padding: '0', height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--bg-color)', color: 'var(--text-primary)' }}>
 
       {/* Scanning Overlay */}
       {isScanning && (
