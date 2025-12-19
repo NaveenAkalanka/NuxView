@@ -18,8 +18,8 @@ import { scanNode } from '../api';
 import type { FileNode } from '../api';
 import { Folder, Plus, Minus } from 'lucide-react';
 
-const NODE_WIDTH = 160;
-const NODE_HEIGHT = 36;
+const NODE_WIDTH = 140;
+const NODE_HEIGHT = 32;
 
 const getFolderColor = (path: string) => {
     const name = path.split('/').pop()?.toLowerCase() || '';
@@ -71,7 +71,7 @@ const nodeTypes = { folder: FolderNode };
 const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
-    dagreGraph.setGraph({ rankdir: 'TB', nodesep: 30, ranksep: 80 });
+    dagreGraph.setGraph({ rankdir: 'TB', nodesep: 10, ranksep: 40 });
     nodes.filter(n => !n.hidden).forEach((node) => {
         dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
     });
