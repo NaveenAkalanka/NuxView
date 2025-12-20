@@ -118,7 +118,7 @@ function App() {
       <div className="card" style={{ margin: '1rem', marginBottom: '0', padding: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 style={{ fontSize: '1.5rem', margin: 0, background: 'linear-gradient(to right, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>NuxView</h1>
+            <h1 style={{ fontSize: '1.5rem', margin: 0, background: 'linear-gradient(to right, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>NuxView (Unified)</h1>
             <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.6 }}>
               {lastSynced ? `Loaded from Cache • ${lastSynced}` : 'No local cache found.'}
             </p>

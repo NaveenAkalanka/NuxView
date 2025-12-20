@@ -464,15 +464,14 @@ const VisualTreeInner: React.FC<{ data: FileNode, selectedPath: string | null, o
         })));
 
         if (selectedPath) {
-            // Find logic to fly to node
-            const targetNode = nodes.find(n => n.data.fullPath === selectedPath);
+            // Use getNodes to avoid dependency loop
+            const currentNodes = getNodes();
+            const targetNode = currentNodes.find(n => n.data.fullPath === selectedPath);
             if (targetNode) {
-                fitView({ nodes: [targetNode], duration: 800, padding: 2 }); // Zoom to node? or just pan?
-                // padding: 2 is huge, maybe just pan to center
-                // Actually fitView with node array focuses well.
+                fitView({ nodes: [targetNode], duration: 800, padding: 0.2 });
             }
         }
-    }, [selectedPath, setNodes, nodes, fitView, onSelect]);
+    }, [selectedPath, setNodes, getNodes, fitView, onSelect]);
 
     useEffect(() => {
         if (data.path === lastPath.current) return;
