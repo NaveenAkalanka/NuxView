@@ -32,7 +32,34 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, visible, path, o
 
     if (!visible) return null;
 
-    const relativePath = path.split('/').pop() || path;
+    const pathParts = path.split('/');
+    const relativePath = pathParts[pathParts.length - 1] || path;
+
+    const copyToClipboard = async (text: string) => {
+        try {
+            if (navigator.clipboard) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                throw new Error('Clipboard API unavailable');
+            }
+        } catch (err) {
+            // Fallback for non-secure contexts (http)
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+            } catch (fallbackErr) {
+                console.error('Fallback copy failed', fallbackErr);
+                alert('Failed to copy to clipboard');
+            }
+            document.body.removeChild(textArea);
+        }
+    };
 
     const handleAction = async (action: string) => {
         switch (action) {
@@ -45,11 +72,11 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, visible, path, o
                 onClose();
                 break;
             case 'copy_relative':
-                navigator.clipboard.writeText(relativePath);
+                await copyToClipboard(relativePath);
                 onClose();
                 break;
             case 'copy_full':
-                navigator.clipboard.writeText(path);
+                await copyToClipboard(path);
                 onClose();
                 break;
             case 'permissions':
