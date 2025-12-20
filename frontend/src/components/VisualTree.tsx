@@ -457,21 +457,66 @@ const VisualTreeInner: React.FC<{ data: FileNode, selectedPath: string | null, o
 
     const lastPath = useRef<string | null>(null);
 
+    const ensurePathVisible = useCallback(async (targetPath: string) => {
+        // Ensure strictly inside root
+        if (!targetPath.startsWith(data.path)) return;
+
+        let currentPath = data.path;
+        // Verify root expansion first
+        let rootNode = getNodes().find(n => n.id === currentPath);
+        if (rootNode && !rootNode.data.isExpanded) {
+            await handleExpand(currentPath, currentPath);
+            await new Promise(r => setTimeout(r, 300)); // Layout wait
+        }
+
+        const relative = targetPath.slice(data.path.length).replace(/^[/\\]/, '');
+        if (!relative) return;
+
+        const parts = relative.split(/[/\\]/);
+
+        // Iterate segments to expand parents
+        for (let i = 0; i < parts.length - 1; i++) {
+            const sep = data.path.includes('\\') ? '\\' : '/';
+            currentPath = `${currentPath.replace(/[/\\]$/, '')}${sep}${parts[i]}`;
+
+            // Retry logic for node appearance
+            let node = getNodes().find(n => n.id === currentPath);
+            if (!node) {
+                // Wait a bit if node not found (previous expansion might still be processing/animating)
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    await new Promise(r => setTimeout(r, 200));
+                    node = getNodes().find(n => n.id === currentPath);
+                    if (node) break;
+                }
+            }
+
+            if (node && !node.data.isExpanded) {
+                await handleExpand(node.id, node.data.fullPath as string);
+                await new Promise(r => setTimeout(r, 300));
+            }
+        }
+    }, [data.path, getNodes, handleExpand]);
+
     useEffect(() => {
         setNodes(nds => nds.map(n => ({
             ...n,
             data: { ...n.data, isSelected: n.data.fullPath === selectedPath, onSelect }
         })));
 
-        if (selectedPath) {
-            // Use getNodes to avoid dependency loop
-            const currentNodes = getNodes();
-            const targetNode = currentNodes.find(n => n.data.fullPath === selectedPath);
-            if (targetNode) {
-                fitView({ nodes: [targetNode], duration: 800, padding: 0.2 });
+        const syncSelection = async () => {
+            if (selectedPath) {
+                await ensurePathVisible(selectedPath);
+
+                // Use getNodes to avoid dependency loop and get fresh state
+                const currentNodes = getNodes();
+                const targetNode = currentNodes.find(n => n.data.fullPath === selectedPath);
+                if (targetNode) {
+                    fitView({ nodes: [targetNode], duration: 800, padding: 0.2 });
+                }
             }
-        }
-    }, [selectedPath, setNodes, getNodes, fitView, onSelect]);
+        };
+        syncSelection();
+    }, [selectedPath, setNodes, getNodes, fitView, onSelect, ensurePathVisible]);
 
     useEffect(() => {
         if (data.path === lastPath.current) return;
