@@ -6,6 +6,7 @@ class FileNode(BaseModel):
     path: str
     type: str = "directory"  # explicit type
     children: Optional[List['FileNode']] = None
+    has_children: bool = False # optimization for UI
 
 # Needed for recursive models
 FileNode.model_rebuild()

@@ -17,6 +17,7 @@ export interface FileNode {
   path: string;
   type: string;
   children?: FileNode[];
+  has_children?: boolean;
 }
 
 export const scanPath = async (path: string, maxDepth: number = 1, excludes: string[] = []) => {

@@ -55,14 +55,20 @@ const FolderNode = ({ data }: NodeProps) => {
     // Check if it's likely a folder or file (we don't strictly know if leaf is file or empty folder, but assume generic)
     // Actually we can pass hasChildren flag if we knew. For now, use Folder icon.
 
+    const hasContent = Boolean(
+        (data.children && Array.isArray(data.children) && data.children.length > 0) ||
+        data.has_children
+    );
+
     const handleExpandClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        onExpand(data.id as string, String(data.fullPath));
+        if (hasContent) {
+            onExpand(data.id as string, String(data.fullPath));
+        }
     };
 
     const handleNodeClick = () => {
-        // e.stopPropagation(); // Don't stop propagation so drag still works? Actually drag starts on mousedown.
-        // But we want to select.
+        // e.stopPropagation(); 
         if (onSelect) onSelect(String(data.fullPath));
     };
 
@@ -96,11 +102,12 @@ const FolderNode = ({ data }: NodeProps) => {
                 style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: '24px', height: '24px', borderRadius: '4px',
-                    cursor: 'pointer',
-                    color: 'var(--text-secondary)'
+                    cursor: hasContent ? 'pointer' : 'default',
+                    color: 'var(--text-secondary)',
+                    opacity: hasContent ? 1 : 0
                 }}
             >
-                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                {hasContent && (isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}
             </div>
 
             {/* Icon */}

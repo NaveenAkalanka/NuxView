@@ -39,7 +39,8 @@ def paths_to_tree(paths: List[str], root_path: str) -> Optional[FileNode]:
     for path in paths:
         if not path: continue
         name = os.path.basename(path) or "/"
-        node = FileNode(name=name, path=path, children=[])
+        # Initial assumption: has_children=False until we find a child
+        node = FileNode(name=name, path=path, children=[], has_children=False)
         nodes[path] = node
         
         if path == root_path:
@@ -48,9 +49,11 @@ def paths_to_tree(paths: List[str], root_path: str) -> Optional[FileNode]:
             
         parent_path = os.path.dirname(path)
         if parent_path in nodes:
-            if nodes[parent_path].children is None:
-                nodes[parent_path].children = []
-            nodes[parent_path].children.append(node)
+            parent = nodes[parent_path]
+            if parent.children is None:
+                parent.children = []
+            parent.children.append(node)
+            parent.has_children = True # Mark parent as having children
             
     return root_node
 
@@ -128,11 +131,24 @@ def scan_with_python(root_path: str, max_depth: int = 1, excludes: Optional[List
     if not os.path.isdir(root_path): return None
     
     name = os.path.basename(root_path) or "/"
-    root = FileNode(name=name, path=root_path, type="directory", children=[])
-    
-    if max_depth <= 0: return root
+    root = FileNode(name=name, path=root_path, type="directory", children=[], has_children=False)
     
     exclude_list = DEFAULT_EXCLUDES + (excludes or [])
+    
+    # helper for checking exclusions
+    def is_excluded(p: str):
+         return any(ex in p for ex in exclude_list)
+
+    if max_depth <= 0:
+        # Check if it has any subdirectories to set has_children flag (Peek 1 level deep)
+        try:
+            with os.scandir(root_path) as it:
+                for entry in it:
+                     if entry.is_dir() and not is_excluded(entry.path):
+                         root.has_children = True
+                         break
+        except: pass
+        return root
     
     try:
         with os.scandir(root_path) as it:
@@ -140,11 +156,12 @@ def scan_with_python(root_path: str, max_depth: int = 1, excludes: Optional[List
                 if entry.is_dir():
                     path = entry.path
                     # Check exclusions
-                    if any(ex in path for ex in exclude_list): continue
+                    if is_excluded(path): continue
                     
                     child = scan_with_python(path, max_depth - 1, excludes)
                     if child:
                         root.children.append(child)
+                        root.has_children = True # Mark current as having children since we found one
         return root
     except PermissionError:
         return root # Silent fail for perms
