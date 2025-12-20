@@ -4,7 +4,8 @@ import type { FileNode } from './api';
 import { VisualTree } from './components/VisualTree';
 import { SidePanel } from './components/SidePanel';
 import { ContextMenu } from './components/ContextMenu';
-import { RefreshCcw, Search, Database } from 'lucide-react';
+import { NavBar } from './components/NavBar';
+import { RefreshCcw } from 'lucide-react';
 
 function App() {
   const [tree, setTree] = useState<FileNode | null>(null);
@@ -107,7 +108,7 @@ function App() {
   }, []);
 
   return (
-    <div style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--bg-color)', color: 'var(--text-primary)' }}>
+    <div className="app-grid">
 
       {/* Scanning Overlay */}
       {isScanning && (
@@ -129,60 +130,48 @@ function App() {
       )}
 
       {/* Header */}
-      <div className="card" style={{ margin: '1rem', marginBottom: '0', padding: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 style={{ fontSize: '1.5rem', margin: 0, background: 'linear-gradient(to right, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>NuxView (Unified)</h1>
-            <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.6 }}>
-              {lastSynced ? `Loaded from Cache • ${lastSynced}` : 'No local cache found.'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <div className="input-group" style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', border: '1px solid var(--border-color)', padding: '2px' }}>
-              <input
-                value={inputPath}
-                onChange={(e) => setInputPath(e.target.value)}
-                placeholder="/"
-                style={{ background: 'transparent', border: 'none', color: 'white', padding: '6px 12px', width: '250px', outline: 'none' }}
-              />
-              <button onClick={quickScan} title="Quick Preview (Depth 1)" style={{ background: 'transparent', border: 'none', color: 'white', padding: '6px', cursor: 'pointer', opacity: 0.7 }}>
-                <Search size={18} />
-              </button>
-            </div>
-            <button className="button" onClick={handleFullScan} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--primary-color)' }}>
-              <Database size={16} />
-              Full System Scan
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Navigation */}
+      <NavBar
+        inputPath={inputPath}
+        setInputPath={setInputPath}
+        onQuickScan={quickScan}
+        onFullScan={handleFullScan}
+        lastSynced={lastSynced}
+      />
 
       {error && (
-        <div className="card" style={{ margin: '1rem', borderColor: '#ef4444', color: '#ef4444' }}>Error: {error}</div>
+        <div style={{ padding: '0 16px', color: 'var(--danger)', fontWeight: 500 }}>Error: {error}</div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', opacity: isScanning ? 0.3 : 1, transition: 'opacity 0.5s' }}>
-        <SidePanel data={tree} selectedPath={selectedPath} onSelect={handleSelect} onContextMenu={handleContextMenu} />
-        <div style={{ flex: 1, position: 'relative' }}>
+      {/* Main Content Grid */}
+      <div className="content-grid" style={{ opacity: isScanning ? 0.3 : 1, transition: 'opacity 0.5s' }}>
+        <div className="frame">
+          {tree ? (
+            <SidePanel data={tree} selectedPath={selectedPath} onSelect={handleSelect} onContextMenu={handleContextMenu} />
+          ) : (
+            <div style={{ padding: '16px', opacity: 0.5, fontSize: '0.8rem' }}>No data loaded to explorer.</div>
+          )}
+        </div>
+
+        <div className="frame" style={{ position: 'relative' }}>
           {tree ? (
             <VisualTree data={tree} selectedPath={selectedPath} onSelect={handleSelect} onContextMenu={handleContextMenu} />
           ) : (
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
               <p>No system data loaded.</p>
-              <button className="button" onClick={handleFullScan} style={{ marginTop: '1rem' }}>Run First Scan</button>
+              <button className="btn-modern" onClick={handleFullScan} style={{ marginTop: '1rem' }}>Run First Scan</button>
             </div>
           )}
         </div>
       </div>
 
+
+
       <style>{`
          .spinning { animation: spin 2s linear infinite; }
          @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
        `}</style>
-      <style>{`
-         .spinning { animation: spin 2s linear infinite; }
-         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-       `}</style>
+
 
       <ContextMenu
         {...contextMenu}
