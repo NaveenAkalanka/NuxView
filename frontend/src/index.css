@@ -155,3 +155,30 @@ body {
   background: transparent;
   border: none;
 }
+
+/* React Flow Controls Override */
+.react-flow__controls {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 4px !important;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.react-flow__controls-button {
+  background: var(--card-bg) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--border-color) !important;
+}
+
+.react-flow__controls-button svg {
+  fill: var(--text-primary) !important;
+  max-width: 14px;
+  max-height: 14px;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}

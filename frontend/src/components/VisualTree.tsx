@@ -650,7 +650,7 @@ const VisualTreeInner: React.FC<{
                     maskColor="rgba(0, 0, 0, 0.2)"
                     style={{ background: 'rgba(29, 35, 42, 0.9)', border: '1px solid #333' }}
                 />
-                <Controls style={{ fill: 'white' }} />
+                <Controls />
                 <Background color="#333" gap={16} />
             </ReactFlow>
         </div>
