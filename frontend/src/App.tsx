@@ -3,6 +3,7 @@ import { scanPath, getTree, startFullScan, getScanStatus } from './api';
 import type { FileNode } from './api';
 import { VisualTree } from './components/VisualTree';
 import { SidePanel } from './components/SidePanel';
+import { ContextMenu } from './components/ContextMenu';
 import { RefreshCcw, Search, Database } from 'lucide-react';
 
 function App() {
@@ -13,6 +14,11 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, visible: boolean, path: string }>({
+    x: 0, y: 0, visible: false, path: ''
+  });
 
   const pollTimer = useRef<number | null>(null);
 
@@ -92,6 +98,14 @@ function App() {
     setSelectedPath(path);
   }, []);
 
+  const handleContextMenu = useCallback((x: number, y: number, path: string) => {
+    setContextMenu({ x, y, visible: true, path });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(prev => ({ ...prev, visible: false }));
+  }, []);
+
   return (
     <div style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--bg-color)', color: 'var(--text-primary)' }}>
 
@@ -148,10 +162,10 @@ function App() {
       )}
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', opacity: isScanning ? 0.3 : 1, transition: 'opacity 0.5s' }}>
-        <SidePanel data={tree} selectedPath={selectedPath} onSelect={handleSelect} />
+        <SidePanel data={tree} selectedPath={selectedPath} onSelect={handleSelect} onContextMenu={handleContextMenu} />
         <div style={{ flex: 1, position: 'relative' }}>
           {tree ? (
-            <VisualTree data={tree} selectedPath={selectedPath} onSelect={handleSelect} />
+            <VisualTree data={tree} selectedPath={selectedPath} onSelect={handleSelect} onContextMenu={handleContextMenu} />
           ) : (
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
               <p>No system data loaded.</p>
@@ -165,6 +179,15 @@ function App() {
          .spinning { animation: spin 2s linear infinite; }
          @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
        `}</style>
+      <style>{`
+         .spinning { animation: spin 2s linear infinite; }
+         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+       `}</style>
+
+      <ContextMenu
+        {...contextMenu}
+        onClose={closeContextMenu}
+      />
     </div>
   );
 }

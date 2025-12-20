@@ -11,9 +11,10 @@ interface TreeItemProps {
     depth: number;
     selectedPath: string | null;
     onSelect: (path: string) => void;
+    onContextMenu?: (x: number, y: number, path: string) => void;
 }
 
-const TreeItem: React.FC<TreeItemProps> = ({ node, depth, selectedPath, onSelect }) => {
+const TreeItem: React.FC<TreeItemProps> = ({ node, depth, selectedPath, onSelect, onContextMenu }) => {
     // Start collapsed by default
     const [isOpen, setIsOpen] = useState(false);
     // Use existing children if provided (Level 1 in root)
@@ -81,6 +82,14 @@ const TreeItem: React.FC<TreeItemProps> = ({ node, depth, selectedPath, onSelect
         }
     };
 
+    const handleContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onContextMenu) {
+            onContextMenu(e.clientX, e.clientY, node.path);
+        }
+    };
+
     return (
         <div style={{ marginLeft: depth > 0 ? '1rem' : 0 }}>
             <div
@@ -98,6 +107,7 @@ const TreeItem: React.FC<TreeItemProps> = ({ node, depth, selectedPath, onSelect
                     userSelect: 'none'
                 }}
                 className="side-tree-item"
+                onContextMenu={handleContextMenu}
             >
                 {loading ? (
                     <Loader2 size={12} className="spinning" />
@@ -117,7 +127,7 @@ const TreeItem: React.FC<TreeItemProps> = ({ node, depth, selectedPath, onSelect
             {isOpen && (
                 <div style={{ borderLeft: `1px solid ${color}33`, marginLeft: '0.4rem' }}>
                     {children.map((child) => (
-                        <TreeItem key={child.path} node={child} depth={depth + 1} selectedPath={selectedPath} onSelect={onSelect} />
+                        <TreeItem key={child.path} node={child} depth={depth + 1} selectedPath={selectedPath} onSelect={onSelect} onContextMenu={onContextMenu} />
                     ))}
                     {hasLoaded && children.length === 0 && (
                         <div style={{ padding: '4px 20px', fontSize: '0.7rem', opacity: 0.3 }}>(Empty)</div>
@@ -128,7 +138,12 @@ const TreeItem: React.FC<TreeItemProps> = ({ node, depth, selectedPath, onSelect
     );
 };
 
-export const SidePanel: React.FC<{ data: FileNode | null, selectedPath: string | null, onSelect: (path: string) => void }> = ({ data, selectedPath, onSelect }) => {
+export const SidePanel: React.FC<{
+    data: FileNode | null,
+    selectedPath: string | null,
+    onSelect: (path: string) => void,
+    onContextMenu?: (x: number, y: number, path: string) => void
+}> = ({ data, selectedPath, onSelect, onContextMenu }) => {
     return (
         <div style={{
             width: '300px',
@@ -149,7 +164,7 @@ export const SidePanel: React.FC<{ data: FileNode | null, selectedPath: string |
             {!data ? (
                 <div style={{ opacity: 0.4, fontSize: '0.8rem' }}>No data...</div>
             ) : (
-                <TreeItem node={data} depth={0} selectedPath={selectedPath} onSelect={onSelect} />
+                <TreeItem node={data} depth={0} selectedPath={selectedPath} onSelect={onSelect} onContextMenu={onContextMenu} />
             )}
         </div>
     );

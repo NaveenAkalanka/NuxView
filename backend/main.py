@@ -112,6 +112,43 @@ def scan_node(req: ScanRequest):
     
     return {"status": "success", "node": tree}
 
+@app.post("/api/node/details")
+def get_node_details(req: ScanRequest):
+    """Refetches metadata for a specific path."""
+    if not os.path.exists(req.path):
+        raise HTTPException(status_code=404, detail=f"Path not found: {req.path}")
+
+    try:
+        stat_info = os.stat(req.path)
+        
+        # Cross-platform owner/group
+        owner = str(stat_info.st_uid)
+        group = str(stat_info.st_gid)
+        try:
+            import pwd, grp
+            owner = pwd.getpwuid(stat_info.st_uid).pw_name
+            group = grp.getgrgid(stat_info.st_gid).gr_name
+        except ImportError:
+            pass # Windows or non-posix
+
+        import datetime
+        details = {
+            "name": os.path.basename(req.path),
+            "path": req.path,
+            "size": stat_info.st_size,
+            "permissions": oct(stat_info.st_mode)[-3:], # Last 3 digits for standard unix perm
+            "owner": owner,
+            "group": group,
+            "modified": datetime.datetime.fromtimestamp(stat_info.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            "accessed": datetime.datetime.fromtimestamp(stat_info.st_atime).strftime("%Y-%m-%d %H:%M:%S"),
+            "created": datetime.datetime.fromtimestamp(stat_info.st_ctime).strftime("%Y-%m-%d %H:%M:%S"),
+            "is_dir": os.path.isdir(req.path)
+        }
+        return {"status": "success", "details": details}
+    except Exception as e:
+        logger.error(f"Details fetch failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/tree")
 def get_tree():
     """Returns the cached tree root, or falls back to a live root scan."""

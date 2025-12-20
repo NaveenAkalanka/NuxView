@@ -20,6 +20,24 @@ export interface FileNode {
   has_children?: boolean;
 }
 
+export interface NodeDetails {
+  name: string;
+  path: string;
+  size: number;
+  permissions: string;
+  owner: string;
+  group: string;
+  modified: string;
+  accessed: string;
+  created: string;
+  is_dir: boolean;
+}
+
+export const getNodeDetails = async (path: string) => {
+  const res = await api.post<{ details: NodeDetails }>('/api/node/details', { path });
+  return res.data.details;
+};
+
 export const scanPath = async (path: string, maxDepth: number = 1, excludes: string[] = []) => {
   const res = await api.post<{ tree: FileNode }>('/api/scan', { path, max_depth: maxDepth, excludes });
   return res.data.tree;

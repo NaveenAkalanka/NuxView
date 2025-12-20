@@ -214,7 +214,12 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
 const nodeTypes = { folder: FolderNode };
 
-const VisualTreeInner: React.FC<{ data: FileNode, selectedPath: string | null, onSelect: (path: string) => void }> = ({ data, selectedPath, onSelect }) => {
+const VisualTreeInner: React.FC<{
+    data: FileNode,
+    selectedPath: string | null,
+    onSelect: (path: string) => void,
+    onContextMenu?: (x: number, y: number, path: string) => void
+}> = ({ data, selectedPath, onSelect, onContextMenu }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const { fitView, getEdges, getNodes } = useReactFlow();
@@ -222,8 +227,11 @@ const VisualTreeInner: React.FC<{ data: FileNode, selectedPath: string | null, o
 
     const handleContextMenu = useCallback((event: React.MouseEvent, nodeData: any) => {
         event.preventDefault();
-        window.open(`https://www.google.com/search?q=${encodeURIComponent(String(nodeData.fullPath))}`, '_blank');
-    }, []);
+        event.stopPropagation();
+        if (onContextMenu) {
+            onContextMenu(event.clientX, event.clientY, String(nodeData.fullPath));
+        }
+    }, [onContextMenu]);
 
     // Persistence helpers
     const getPersistedPos = useCallback((id: string) => {
@@ -625,23 +633,37 @@ const VisualTreeInner: React.FC<{ data: FileNode, selectedPath: string | null, o
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
-                nodeTypes={nodeTypes}
                 onNodeDragStart={onNodeDragStart}
                 onNodeDrag={onNodeDrag}
                 onNodeDragStop={onNodeDragStop}
-                fitView
-                snapToGrid
-                snapGrid={[15, 15]}
-                minZoom={0.01}
+                nodeTypes={nodeTypes}
+                minZoom={0.1}
                 maxZoom={2}
-                onlyRenderVisibleElements={true}
+                fitView
+                style={{ background: 'var(--bg-color)' }}
             >
-                <Background color="#333" gap={20} /><Controls /><MiniMap nodeStrokeWidth={3} zoomable pannable />
+                <MiniMap
+                    nodeColor={n => {
+                        if (n.type === 'folder') return '#4ade80';
+                        return '#eee';
+                    }}
+                    maskColor="rgba(0, 0, 0, 0.2)"
+                    style={{ background: 'rgba(29, 35, 42, 0.9)', border: '1px solid #333' }}
+                />
+                <Controls style={{ fill: 'white' }} />
+                <Background color="#333" gap={16} />
             </ReactFlow>
         </div>
     );
 };
 
-export const VisualTree: React.FC<{ data: FileNode, selectedPath: string | null, onSelect: (path: string) => void }> = (props) => (
-    <ReactFlowProvider><VisualTreeInner {...props} /></ReactFlowProvider>
+export const VisualTree: React.FC<{
+    data: FileNode,
+    selectedPath: string | null,
+    onSelect: (path: string) => void,
+    onContextMenu?: (x: number, y: number, path: string) => void
+}> = (props) => (
+    <ReactFlowProvider>
+        <VisualTreeInner {...props} />
+    </ReactFlowProvider>
 );
