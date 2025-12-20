@@ -296,7 +296,8 @@ const VisualTreeInner: React.FC<{ data: FileNode, selectedPath: string | null, o
                             id: child.path, label: child.name, fullPath: child.path,
                             depth: (Number(depth) || 0) + 1, isExpanded: false,
                             onExpand: handleExpand, onContextMenu: handleContextMenu,
-                            onSelect, isSelected: child.path === selectedPath
+                            onSelect, isSelected: child.path === selectedPath,
+                            has_children: child.has_children
                         }
                     }));
 
@@ -540,7 +541,8 @@ const VisualTreeInner: React.FC<{ data: FileNode, selectedPath: string | null, o
                 id: rootId, label: data.name || '/', fullPath: data.path,
                 depth: 0, isExpanded: false,
                 onExpand: handleExpand, onContextMenu: handleContextMenu,
-                onSelect
+                onSelect,
+                has_children: data.has_children
             },
             position: { x: 0, y: 0 }
         });
