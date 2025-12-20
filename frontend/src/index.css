@@ -144,37 +144,12 @@ body {
 
 
 /* ReactFlow Nodes */
-/* Dot Nodes */
-.dot-node {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Rect Nodes */
+.rect-node {
+  /* Common styles handled in JS inline for dynamic colors, but base here */
 }
 
-.dot-label {
-  position: absolute;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  white-space: nowrap;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  pointer-events: none;
-  transition: all 0.2s ease;
-  padding: 2px 6px;
-  border-radius: 4px;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dot-node:hover .dot-label {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.dot-node .react-flow__handle {
+.rect-node .react-flow__handle {
   width: 1px;
   height: 1px;
   background: transparent;

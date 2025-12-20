@@ -11,16 +11,17 @@ import {
     ReactFlowProvider,
     useReactFlow
 } from '@xyflow/react';
+import { ChevronRight, ChevronDown, Folder } from 'lucide-react';
 import type { Node, Edge, NodeProps } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
 import { scanNode } from '../api';
 import type { FileNode } from '../api';
 
-const NODE_WIDTH = 24;
-const NODE_HEIGHT = 24;
-const NODE_SPACING_X = 220; // Increased to prevent label overlap
-const NODE_SPACING_Y = 40;  // Sibling distance
+const NODE_WIDTH = 220;
+const NODE_HEIGHT = 50;
+const NODE_SPACING_X = 260; // Increased for wider nodes
+const NODE_SPACING_Y = 60;  // Sibling distance
 
 const getFolderColor = (path: string, depth: number) => {
     // Base hues for each level
@@ -47,30 +48,74 @@ const getFolderColor = (path: string, depth: number) => {
 const FolderNode = ({ data }: NodeProps) => {
     const color = getFolderColor(String(data.fullPath), Number(data.depth) || 0);
     const isExpanded = data.isExpanded as boolean;
+    const isSelected = data.isSelected as boolean;
     const onExpand = data.onExpand as (id: string, path: string) => void;
+    const onSelect = data.onSelect as (path: string) => void;
+
+    // Check if it's likely a folder or file (we don't strictly know if leaf is file or empty folder, but assume generic)
+    // Actually we can pass hasChildren flag if we knew. For now, use Folder icon.
+
+    const handleExpandClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onExpand(data.id as string, String(data.fullPath));
+    };
+
+    const handleNodeClick = () => {
+        // e.stopPropagation(); // Don't stop propagation so drag still works? Actually drag starts on mousedown.
+        // But we want to select.
+        if (onSelect) onSelect(String(data.fullPath));
+    };
 
     return (
         <div
-            className="dot-node"
+            className="rect-node"
             onContextMenu={(e) => (data.onContextMenu as Function)(e, data)}
-            style={{ position: 'relative', width: NODE_WIDTH, height: NODE_HEIGHT }}
+            onClick={handleNodeClick}
+            style={{
+                position: 'relative',
+                width: NODE_WIDTH,
+                height: NODE_HEIGHT,
+                background: 'var(--card-bg)',
+                borderLeft: `4px solid ${color}`,
+                border: isSelected ? `2px solid ${color}` : `1px solid var(--border-color)`,
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 10px',
+                gap: '8px',
+                boxShadow: isSelected ? `0 0 15px ${color}66` : '0 2px 5px rgba(0,0,0,0.2)',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
+            }}
         >
             <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
 
-            {/* Minimal Dot */}
+            {/* Expand Toggle */}
             <div
-                onClick={() => onExpand(data.id as string, String(data.fullPath))}
+                onClick={handleExpandClick}
                 style={{
-                    width: '12px', height: '12px', borderRadius: '50%',
-                    background: color, border: `2px solid ${isExpanded ? '#fff' : 'transparent'}`,
-                    boxShadow: `0 0 10px ${color}44`, cursor: 'pointer',
-                    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                    transition: 'all 0.2s ease'
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: '24px', height: '24px', borderRadius: '4px',
+                    cursor: 'pointer',
+                    color: 'var(--text-secondary)'
                 }}
-            />
+            >
+                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </div>
 
-            {/* Floating Label */}
-            <div className="dot-label" title={String(data.fullPath)}>
+            {/* Icon */}
+            <Folder size={18} fill={color} stroke={color} fillOpacity={0.2} />
+
+            {/* Label */}
+            <div style={{
+                flex: 1,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                color: 'var(--text-primary)'
+            }} title={String(data.label)}>
                 {String(data.label)}
             </div>
 
@@ -162,7 +207,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
 const nodeTypes = { folder: FolderNode };
 
-const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
+const VisualTreeInner: React.FC<{ data: FileNode, selectedPath: string | null, onSelect: (path: string) => void }> = ({ data, selectedPath, onSelect }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const { fitView, getEdges, getNodes } = useReactFlow();
@@ -243,7 +288,8 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
                         data: {
                             id: child.path, label: child.name, fullPath: child.path,
                             depth: (Number(depth) || 0) + 1, isExpanded: false,
-                            onExpand: handleExpand, onContextMenu: handleContextMenu
+                            onExpand: handleExpand, onContextMenu: handleContextMenu,
+                            onSelect, isSelected: child.path === selectedPath
                         }
                     }));
 
@@ -313,7 +359,8 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
                     data: {
                         id: child.path, label: child.name, fullPath: child.path,
                         depth: (Number(node.data.depth) || 0) + 1, isExpanded: false,
-                        onExpand: handleExpand, onContextMenu: handleContextMenu
+                        onExpand: handleExpand, onContextMenu: handleContextMenu,
+                        onSelect, isSelected: child.path === selectedPath
                     }
                 }));
 
@@ -411,6 +458,23 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
     const lastPath = useRef<string | null>(null);
 
     useEffect(() => {
+        setNodes(nds => nds.map(n => ({
+            ...n,
+            data: { ...n.data, isSelected: n.data.fullPath === selectedPath, onSelect }
+        })));
+
+        if (selectedPath) {
+            // Find logic to fly to node
+            const targetNode = nodes.find(n => n.data.fullPath === selectedPath);
+            if (targetNode) {
+                fitView({ nodes: [targetNode], duration: 800, padding: 2 }); // Zoom to node? or just pan?
+                // padding: 2 is huge, maybe just pan to center
+                // Actually fitView with node array focuses well.
+            }
+        }
+    }, [selectedPath, setNodes, nodes, fitView, onSelect]);
+
+    useEffect(() => {
         if (data.path === lastPath.current) return;
         lastPath.current = data.path;
 
@@ -424,7 +488,8 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
             data: {
                 id: rootId, label: data.name || '/', fullPath: data.path,
                 depth: 0, isExpanded: false,
-                onExpand: handleExpand, onContextMenu: handleContextMenu
+                onExpand: handleExpand, onContextMenu: handleContextMenu,
+                onSelect
             },
             position: { x: 0, y: 0 }
         });
@@ -439,8 +504,8 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
 
         setNodes(persistedNodes);
         setEdges(lEdges);
-        setTimeout(() => fitView({ duration: 400, padding: 2 }), 100);
-    }, [data.path, data.name, handleExpand, handleContextMenu, fitView, setNodes, setEdges, getPersistedPos]);
+        setTimeout(() => fitView({ duration: 400, padding: 0.2 }), 100);
+    }, [data.path, data.name, handleExpand, handleContextMenu, fitView, setNodes, setEdges, getPersistedPos, onSelect]);
 
     const applyLayout = useCallback(() => {
         const { nodes: lNodes, edges: lEdges } = getLayoutedElements(nodes, edges);
@@ -524,6 +589,6 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
     );
 };
 
-export const VisualTree: React.FC<{ data: FileNode }> = (props) => (
+export const VisualTree: React.FC<{ data: FileNode, selectedPath: string | null, onSelect: (path: string) => void }> = (props) => (
     <ReactFlowProvider><VisualTreeInner {...props} /></ReactFlowProvider>
 );

@@ -12,6 +12,7 @@ function App() {
   const [inputPath, setInputPath] = useState('/');
   const [error, setError] = useState<string | null>(null);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
   const pollTimer = useRef<number | null>(null);
 
@@ -85,7 +86,11 @@ function App() {
     } catch (err: any) {
       setError(err.message || 'Scan failed');
     }
-  }
+  };
+
+  const handleSelect = useCallback((path: string) => {
+    setSelectedPath(path);
+  }, []);
 
   return (
     <div style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--bg-color)', color: 'var(--text-primary)' }}>
@@ -143,10 +148,10 @@ function App() {
       )}
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', opacity: isScanning ? 0.3 : 1, transition: 'opacity 0.5s' }}>
-        <SidePanel data={tree} />
+        <SidePanel data={tree} selectedPath={selectedPath} onSelect={handleSelect} />
         <div style={{ flex: 1, position: 'relative' }}>
           {tree ? (
-            <VisualTree data={tree} />
+            <VisualTree data={tree} selectedPath={selectedPath} onSelect={handleSelect} />
           ) : (
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
               <p>No system data loaded.</p>
