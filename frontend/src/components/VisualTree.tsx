@@ -16,12 +16,11 @@ import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
 import { scanNode } from '../api';
 import type { FileNode } from '../api';
-import { Folder, Plus, Minus } from 'lucide-react';
 
-const NODE_WIDTH = 140;
-const NODE_HEIGHT = 32;
-const NODE_SPACING_X = 200; // Wider gap for better cousin spacing
-const NODE_SPACING_Y = 140;
+const NODE_WIDTH = 24;
+const NODE_HEIGHT = 24;
+const NODE_SPACING_X = 180; // Level distance
+const NODE_SPACING_Y = 40;  // Sibling distance
 
 const getFolderColor = (path: string, depth: number) => {
     // Base hues for each level
@@ -51,27 +50,31 @@ const FolderNode = ({ data }: NodeProps) => {
     const onExpand = data.onExpand as (id: string, path: string) => void;
 
     return (
-        <div className="folder-node" onContextMenu={(e) => (data.onContextMenu as Function)(e, data)} style={{ borderColor: color, position: 'relative' }}>
-            <Handle type="target" position={Position.Top} style={{ background: color }} />
-            <div className="folder-node-content" style={{ paddingRight: '24px' }}>
-                <Folder size={14} style={{ color }} />
-                <span className="folder-name" title={String(data.fullPath)}>{String(data.label)}</span>
+        <div
+            className="dot-node"
+            onContextMenu={(e) => (data.onContextMenu as Function)(e, data)}
+            style={{ position: 'relative', width: NODE_WIDTH, height: NODE_HEIGHT }}
+        >
+            <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+
+            {/* Minimal Dot */}
+            <div
+                onClick={() => onExpand(data.id as string, String(data.fullPath))}
+                style={{
+                    width: '12px', height: '12px', borderRadius: '50%',
+                    background: color, border: `2px solid ${isExpanded ? '#fff' : 'transparent'}`,
+                    boxShadow: `0 0 10px ${color}44`, cursor: 'pointer',
+                    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                    transition: 'all 0.2s ease'
+                }}
+            />
+
+            {/* Floating Label */}
+            <div className="dot-label" title={String(data.fullPath)}>
+                {String(data.label)}
             </div>
 
-            {/* Expand/Collapse Button */}
-            <button
-                onClick={(e) => { e.stopPropagation(); onExpand(data.id as string, String(data.fullPath)); }}
-                style={{
-                    position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
-                    background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '4px',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '2px', color: color, pointerEvents: 'all'
-                }}
-            >
-                {isExpanded ? <Minus size={12} /> : <Plus size={12} />}
-            </button>
-
-            <Handle type="source" position={Position.Bottom} style={{ background: color }} />
+            <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
         </div>
     );
 };
@@ -80,11 +83,11 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-    // Base spacing
+    // LR Spacing: ranksep is horizontal level distance, nodesep is vertical sibling distance
     dagreGraph.setGraph({
-        rankdir: 'TB',
-        nodesep: NODE_SPACING_X - NODE_WIDTH,
-        ranksep: NODE_SPACING_Y - NODE_HEIGHT
+        rankdir: 'LR',
+        nodesep: NODE_SPACING_Y,
+        ranksep: NODE_SPACING_X
     });
 
     // 1. Detect dense parents and prepare sequencing
@@ -104,21 +107,27 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
         dagreGraph.setEdge(edge.source, edge.target);
     });
 
-    // Space Optimization: Vertical stacking for folders with >= 5 children
+    // Space Optimization: Multi-Column Grid stacking for folders with >= 5 children
     const DENSE_THRESHOLD = 5;
+    const MAX_NODES_PER_COLUMN = 10;
+
     Object.entries(childrenByParent).forEach(([parentId, children]) => {
         if (children.length >= DENSE_THRESHOLD) {
-            console.log(`[Layout] Dense parent detected: ${parentId} (${children.length} children). Applying vertical cascade.`);
-            // Force vertical stack by adding sequencing edges Child[i] -> Child[i+1]
+            console.log(`[Layout] Dense parent detected: ${parentId} (${children.length} children). Applying multi-column grid.`);
+
             const sortedChildren = [...children].sort((a, b) => {
                 const nodeA = nodes.find(n => n.id === a);
                 const nodeB = nodes.find(n => n.id === b);
                 return String(nodeA?.data?.label || '').localeCompare(String(nodeB?.data?.label || ''));
             });
 
-            for (let i = 0; i < sortedChildren.length - 1; i++) {
-                // High weight and minlen: 1 forces them into a vertical line
-                dagreGraph.setEdge(sortedChildren[i], sortedChildren[i + 1], { weight: 20, minlen: 1 });
+            // Split into columns
+            for (let i = 0; i < sortedChildren.length; i += MAX_NODES_PER_COLUMN) {
+                const column = sortedChildren.slice(i, i + MAX_NODES_PER_COLUMN);
+                // Sequence nodes within this column to force them vertical
+                for (let j = 0; j < column.length - 1; j++) {
+                    dagreGraph.setEdge(column[j], column[j + 1], { weight: 20, minlen: 1 });
+                }
             }
         }
     });
@@ -137,7 +146,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
             const parentColor = sourceNode ? getFolderColor(String(sourceNode.data.fullPath), Number(sourceNode.data.depth)) : 'rgba(255,255,255,0.2)';
             return {
                 ...edge,
-                style: { stroke: parentColor, strokeWidth: 2, opacity: 0.6 },
+                type: 'default', // Bezier curves
+                style: { stroke: parentColor, strokeWidth: 1.5, opacity: 0.4 },
             };
         })
     };
@@ -232,8 +242,8 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
 
                     const newEdges: Edge[] = childNodes.map(child => ({
                         id: `${id}-${child.id}`, source: id, target: child.id,
-                        type: 'smoothstep', animated: true,
-                        style: { stroke: getFolderColor(String(node.data.fullPath), Number(node.data.depth)), strokeWidth: 2, opacity: 0.6 }
+                        type: 'default', animated: false,
+                        style: { stroke: getFolderColor(String(node.data.fullPath), Number(node.data.depth)), strokeWidth: 1.5, opacity: 0.4 }
                     }));
 
                     const baseNodes = currentNodes.map(n => n.id === id ? { ...n, data: { ...n.data, isExpanded: true } } : n);

@@ -1,7 +1,7 @@
 import paramiko
 import json
 
-hostname = "192.168.1.2"
+hostname = "192.168.1.3"
 username = "ninja"
 password = "Nvnaka7799@"
 

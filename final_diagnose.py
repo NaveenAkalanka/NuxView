@@ -4,7 +4,7 @@ import io
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-hostname = "192.168.1.2"
+hostname = "192.168.1.3"
 username = "ninja"
 password = "Nvnaka7799@"
 

@@ -144,57 +144,36 @@ body {
 
 
 /* ReactFlow Nodes */
-.folder-node {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  width: 160px;
-  padding: 4px 8px;
-  display: flex;
-  flex-direction: column;
-  transition: all 0.2s;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  font-size: 0.8rem;
-}
-
-.folder-node:hover {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px var(--accent-color);
-}
-
-.folder-node .react-flow__handle {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  border: none;
-}
-
-.folder-node .react-flow__handle-top {
-  top: -4px;
-}
-
-.folder-node .react-flow__handle-bottom {
-  bottom: -4px;
-}
-
-.folder-node-content {
+/* Dot Nodes */
+.dot-node {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  justify-content: center;
 }
 
-.folder-name {
-  font-weight: 500;
+.dot-label {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  pointer-events: none;
+  transition: all 0.2s ease;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-.folder-node-actions {
-  display: flex;
-  justify-content: flex-end;
-  height: 4px;
-  /* spacer for now */
+.dot-node:hover .dot-label {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dot-node .react-flow__handle {
+  width: 1px;
+  height: 1px;
+  background: transparent;
+  border: none;
 }
