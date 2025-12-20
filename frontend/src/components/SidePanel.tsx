@@ -33,6 +33,41 @@ const TreeItem: React.FC<TreeItemProps> = ({ node, depth, selectedPath, onSelect
         }
     }, [isSelected]);
 
+    // Extract load logic for reuse
+    const loadChildren = async () => {
+        setLoading(true);
+        try {
+            const refreshed = await scanNode(node.path);
+            if (refreshed && refreshed.children) {
+                setChildren(refreshed.children);
+            }
+            setHasLoaded(true);
+        } catch (err) {
+            console.error("Failed to load side panel node", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isSelected && itemRef.current) {
+            itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, [isSelected]);
+
+    // Auto-Expand Logic: If selectedPath is inside this folder, open it.
+    useEffect(() => {
+        if (selectedPath && selectedPath.startsWith(node.path) && selectedPath !== node.path) {
+            if (!isOpen) {
+                setIsOpen(true);
+            }
+            // Ensure children are loaded so nested items can also match
+            if (!hasLoaded && !loading && children.length === 0) {
+                loadChildren();
+            }
+        }
+    }, [selectedPath, node.path, isOpen, hasLoaded, loading]);
+
     const handleClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         onSelect(node.path);
@@ -42,18 +77,7 @@ const TreeItem: React.FC<TreeItemProps> = ({ node, depth, selectedPath, onSelect
 
         // If we have no children and haven't tried loading yet, fetch them
         if (nextState && !hasLoaded && children.length === 0) {
-            setLoading(true);
-            try {
-                const refreshed = await scanNode(node.path);
-                if (refreshed && refreshed.children) {
-                    setChildren(refreshed.children);
-                }
-                setHasLoaded(true);
-            } catch (err) {
-                console.error("Failed to load side panel node", err);
-            } finally {
-                setLoading(false);
-            }
+            await loadChildren();
         }
     };
 
