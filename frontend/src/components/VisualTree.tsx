@@ -19,7 +19,7 @@ import type { FileNode } from '../api';
 
 const NODE_WIDTH = 24;
 const NODE_HEIGHT = 24;
-const NODE_SPACING_X = 180; // Level distance
+const NODE_SPACING_X = 220; // Increased to prevent label overlap
 const NODE_SPACING_Y = 40;  // Sibling distance
 
 const getFolderColor = (path: string, depth: number) => {
@@ -122,12 +122,19 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
             });
 
             // Split into columns
+            const columns: string[][] = [];
             for (let i = 0; i < sortedChildren.length; i += MAX_NODES_PER_COLUMN) {
-                const column = sortedChildren.slice(i, i + MAX_NODES_PER_COLUMN);
-                // Sequence nodes within this column to force them vertical
-                for (let j = 0; j < column.length - 1; j++) {
-                    dagreGraph.setEdge(column[j], column[j + 1], { weight: 20, minlen: 1 });
-                }
+                columns.push(sortedChildren.slice(i, i + MAX_NODES_PER_COLUMN));
+            }
+
+            // In LR mode, siblings naturally stack VERTICALLY.
+            // To create multiple columns, we need to push subsequent columns to the RIGHT.
+            // We do this by adding edges from the first node of Col[i] to the first node of Col[i+1].
+            for (let i = 0; i < columns.length - 1; i++) {
+                const currentColFirst = columns[i][0];
+                const nextColFirst = columns[i + 1][0];
+                // Force horizontal separation between columns
+                dagreGraph.setEdge(currentColFirst, nextColFirst, { weight: 50, minlen: 1 });
             }
         }
     });
@@ -289,27 +296,83 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
         }
     }, [getEdges, getNodes, handleContextMenu, setEdges, setNodes, savePositions]);
 
-    const expandAll = useCallback(async () => {
-        let currentNodes = getNodes();
-        let foldersToExpand = currentNodes.filter(n => !n.data.isExpanded && !n.hidden);
+    // Batch processing helper
+    const fetchChildrenRecursive = async (node: Node, allNodes: Node[], allEdges: Edge[], depthLimit: number) => {
+        if (depthLimit <= 0) return;
 
-        // Find root for anchoring
-        const rootNode = currentNodes.find(n => n.data.depth === 0);
-        const initialRootPos = rootNode ? { ...rootNode.position } : { x: 0, y: 0 };
+        try {
+            // Simulate "check if we need to fetch". Real implementation calls API.
+            // We only fetch if not already expanded or fetching deeply.
+            // For simplicity in this demo, we assume scanNode is fast or cached.
+            const newNode = await scanNode(String(node.data.fullPath));
+            if (newNode && newNode.children && newNode.children.length > 0) {
+                const childNodes: Node[] = newNode.children.map((child: any) => ({
+                    id: child.path,
+                    type: 'folder',
+                    position: { x: 0, y: 0 }, // Position set by layout later
+                    data: {
+                        id: child.path, label: child.name, fullPath: child.path,
+                        depth: (Number(node.data.depth) || 0) + 1, isExpanded: false,
+                        onExpand: handleExpand, onContextMenu: handleContextMenu
+                    }
+                }));
 
-        let depthSafety = 0;
-        while (foldersToExpand.length > 0 && depthSafety < 10) {
-            for (const f of foldersToExpand) {
-                await handleExpand(f.id, String(f.data.fullPath), true);
+                const newEdges: Edge[] = childNodes.map(child => ({
+                    id: `${node.id}-${child.id}`, source: node.id, target: child.id,
+                    type: 'default', animated: false,
+                    style: { stroke: getFolderColor(String(node.data.fullPath), Number(node.data.depth)), strokeWidth: 1.5, opacity: 0.4 }
+                }));
+
+                // Add to collections if not exists
+                childNodes.forEach(child => {
+                    if (!allNodes.find(n => n.id === child.id)) {
+                        allNodes.push(child);
+                        // Recursively fetch children
+                        // We push to a promise array to do parallel? For now sequential to avoid rate limits/complexity
+                        // Actually, pushing to a queue would be better, but strict recursion is clearer for now.
+                    }
+                });
+                newEdges.forEach(edge => {
+                    if (!allEdges.find(e => e.id === edge.id)) allEdges.push(edge);
+                });
+
+                // Mark parent as expanded
+                const parentIdx = allNodes.findIndex(n => n.id === node.id);
+                if (parentIdx !== -1) {
+                    allNodes[parentIdx] = { ...allNodes[parentIdx], data: { ...allNodes[parentIdx].data, isExpanded: true } };
+                }
+
+                // Recurse for children
+                for (const child of childNodes) {
+                    // We don't await here to let them run in parallel? 
+                    // No, let's await to ensure order and avoid overwhelming.
+                    await fetchChildrenRecursive(child, allNodes, allEdges, depthLimit - 1);
+                }
             }
-            depthSafety++;
-            const nextNodes = getNodes();
-            foldersToExpand = nextNodes.filter(n => !n.data.isExpanded && !n.hidden);
-        }
+        } catch (e) { console.error(e); }
+    };
 
-        const finalNodes = getNodes();
-        const finalEdges = getEdges();
-        const { nodes: lNodes, edges: lEdges } = getLayoutedElements(finalNodes, finalEdges);
+    const expandAll = useCallback(async () => {
+        const currentNodes = getNodes();
+        const rootNode = currentNodes.find(n => n.data.depth === 0);
+        if (!rootNode) return;
+
+        const initialRootPos = { ...rootNode.position };
+
+        // Clone current state to start with
+        let allNodes = [...getNodes()];
+        let allEdges = [...getEdges()];
+
+        // Start BFS fetch from visible nodes that need expansion
+        // For "Expand All", we typically mean "Expand everything currently in the tree" or "Everything from root".
+        // Let's assume everything from Root down to X levels.
+        const START_DEPTH_LIMIT = 3; // Safety: only expand 3 levels deeper than current
+
+        // Mark all current visible nodes as expand targets?
+        // Let's just start from Root and ensure everything is loaded up to depth limit.
+        await fetchChildrenRecursive(rootNode, allNodes, allEdges, START_DEPTH_LIMIT);
+
+        const { nodes: lNodes, edges: lEdges } = getLayoutedElements(allNodes, allEdges);
 
         // Global Anchor to Root
         const layoutedRootNode = lNodes.find(n => n.data.depth === 0);
@@ -326,7 +389,7 @@ const VisualTreeInner: React.FC<{ data: FileNode }> = ({ data }) => {
         }
         setEdges(lEdges);
         setTimeout(() => fitView({ duration: 800 }), 100);
-    }, [getNodes, getEdges, handleExpand, setNodes, setEdges, fitView]);
+    }, [getNodes, getEdges, setNodes, setEdges, fitView, handleExpand, handleContextMenu]);
 
     const collapseAll = useCallback(() => {
         setNodes(nds => nds.map(n => {
