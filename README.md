@@ -86,11 +86,11 @@ The app will start on port `4897` (e.g., `http://your-server-ip:4897`).
 Once installed, you can manage NuxView using the `nuxview` command:
 
 ### Core Commands
-- **Start the server**:
+- **Start the server** (Accessible on the local network):
   ```bash
   nuxview start
-  # Or with custom port
-  nuxview start --port 5000
+  # Or with custom host/port
+  nuxview start --host 192.168.1.x --port 5000
   ```
 - **Check status**:
   ```bash
