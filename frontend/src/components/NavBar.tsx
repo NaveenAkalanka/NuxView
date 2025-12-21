@@ -17,7 +17,7 @@ export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuick
             <div className="nav-branding">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => onNavigate('home')}>
                     <img src="/NuxView.svg" alt="NuxView" style={{ width: '32px', height: '32px', filter: 'brightness(0) invert(1)' }} />
-                    <div className="hide-on-mobile">
+                    <div>
                         <h1 style={{
                             fontSize: '1.2rem',
                             margin: 0,
@@ -25,11 +25,12 @@ export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuick
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             fontWeight: 700,
-                            letterSpacing: '-0.02em'
+                            letterSpacing: '-0.02em',
+                            lineHeight: 1.1
                         }}>
                             NuxView
                         </h1>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        <div className="hide-on-mobile" style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                             System Visualizer
                         </div>
                     </div>
