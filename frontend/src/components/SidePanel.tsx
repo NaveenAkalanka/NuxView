@@ -146,9 +146,8 @@ export const SidePanel: React.FC<{
 }> = ({ data, selectedPath, onSelect, onContextMenu }) => {
     return (
         <div style={{
-            width: '300px',
+            width: '100%',
             height: '100%',
-            borderRight: '1px solid var(--border-color)',
             background: 'var(--card-bg)',
             overflowY: 'auto',
             padding: '1rem',

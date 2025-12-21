@@ -390,11 +390,14 @@ body {
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
 
+
   /* Layout */
   .app-grid {
+    height: 100dvh;
+    /* Dynamic viewport height */
     grid-template-rows: auto 1fr;
-    padding: 8px;
-    gap: 8px;
+    padding: 4px;
+    gap: 4px;
     overflow: hidden;
     /* Prevent body scroll */
   }
