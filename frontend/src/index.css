@@ -193,6 +193,10 @@ body {
   fill: var(--accent-color) !important;
 }
 
+.react-flow__attribution {
+  display: none !important;
+}
+
 .react-flow__controls-button:last-child {
   border-bottom: none !important;
 }

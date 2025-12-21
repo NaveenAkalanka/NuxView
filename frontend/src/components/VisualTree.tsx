@@ -122,7 +122,7 @@ const FolderNode = ({ data }: NodeProps) => {
                 fontSize: '0.85rem',
                 fontWeight: 500,
                 color: 'var(--text-primary)'
-            }} title={String(data.label)}>
+            }} title={String(data.fullPath)}>
                 {String(data.label)}
             </div>
 

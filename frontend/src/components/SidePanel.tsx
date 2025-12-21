@@ -120,7 +120,7 @@ const TreeItem: React.FC<TreeItemProps> = ({ node, depth, selectedPath, onSelect
                     )
                 )}
                 <Folder size={14} style={{ color: color, opacity: isSelected ? 1 : 0.7 }} />
-                <span style={{ fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isSelected ? '#fff' : 'var(--text-secondary)' }}>
+                <span style={{ fontSize: '0.85rem', whiteSpace: 'nowrap', color: isSelected ? '#fff' : 'var(--text-secondary)' }}>
                     {node.name || '/'}
                 </span>
             </div>
