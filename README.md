@@ -1,12 +1,20 @@
 
-# NuxView
+<p align="center">
+  <img src="https://raw.githubusercontent.com/NaveenAkalanka/NuxView/main/frontend/public/NuxView-white.svg" alt="NuxView Logo" width="150" />
+</p>
 
-<img src="https://raw.githubusercontent.com/NaveenAkalanka/NuxView/main/frontend/public/NuxView-white.svg" alt="NuxView Banner" width="150" />
+<h1 align="center">NuxView</h1>
 
-> **Visualize Your System.**  
-> A powerful, beautiful, and intuitive file explorer for Linux servers.
+<p align="center">
+  <strong>Visualize Your System.</strong><br>
+  A powerful, beautiful, and intuitive file explorer for Linux servers.
+</p>
 
-[Live Demo](http://192.168.1.3:4897) | [Install](#installation) | [Features](#features)
+<p align="center">
+  <a href="https://buymeacoffee.com/naveenakalanka" target="_blank">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" >
+  </a>
+</p>
 
 ---
 
@@ -29,7 +37,7 @@ It's built for **SysAdmins**, **Developers**, and **Linux Enthusiasts** who want
 
 ## 🚀 Installation
 
-### Option 1: One-Line Installer (Recommended)
+### One-Line Installer (Recommended)
 
 Run this command on your Linux server to install and start NuxView automatically:
 
@@ -39,36 +47,37 @@ curl -sL https://raw.githubusercontent.com/NaveenAkalanka/NuxView/main/remote_in
 
 The app will start on port `4897` (e.g., `http://your-server-ip:4897`).
 
-### Option 2: Manual Installation (Development)
+---
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/NaveenAkalanka/NuxView.git
-   cd NuxView
-   ```
+## 📖 How to Use
 
-2. **Backend Setup (Python)**
-   ```bash
-   cd backend
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
+Once installed, you can manage NuxView using the `nuxview` command:
 
-3. **Frontend Setup (React/Vite)**
-   ```bash
-   cd ../frontend
-   npm install
-   npm run build
-   ```
+### Core Commands
+- **Start the server**:
+  ```bash
+  nuxview start
+  # Or with custom port
+  nuxview start --port 5000
+  ```
+- **Check status**:
+  ```bash
+  nuxview status
+  ```
+- **Stop the server**:
+  ```bash
+  nuxview stop
+  ```
 
-4. **Run Application**
-   ```bash
-   # From root directory
-   ./start.sh 
-   # OR manually:
-   uvicorn backend.main:app --host 0.0.0.0 --port 4897
-   ```
+### Advanced Usage
+- **Trigger a custom scan**:
+  ```bash
+  nuxview scan /var/log
+  ```
+- **Remove NuxView**:
+  ```bash
+  nuxview uninstall
+  ```
 
 ---
 
@@ -96,6 +105,12 @@ Contributions are welcome! Please open an issue or submit a pull request.
 Designed & Developed by **Naveen Akalanka**.
 
 ---
+
+<p align="center">
+  <a href="https://buymeacoffee.com/naveenakalanka" target="_blank">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 50px !important;width: 181px !important;" >
+  </a>
+</p>
 
 <p align="center">
   <sub>© 2025 NuxView Project. MIT License.</sub>
