@@ -1,7 +1,7 @@
 
 # NuxView
 
-![NuxView Banner](https://raw.githubusercontent.com/NaveenAkalanka/NuxView/main/frontend/public/NuxView.svg)
+<img src="https://raw.githubusercontent.com/NaveenAkalanka/NuxView/main/frontend/public/NuxView-white.svg" alt="NuxView Banner" width="150" />
 
 > **Visualize Your System.**  
 > A powerful, beautiful, and intuitive file explorer for Linux servers.
