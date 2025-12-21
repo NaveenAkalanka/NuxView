@@ -76,7 +76,7 @@ function App() {
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing.current) return;
-      setSidePanelWidth(prev => {
+      setSidePanelWidth(() => {
         const newWidth = e.clientX;
         if (newWidth < 200) return 200;
         if (newWidth > 600) return 600;
