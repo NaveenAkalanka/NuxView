@@ -35,6 +35,22 @@ It's built for **SysAdmins**, **Developers**, and **Linux Enthusiasts** who want
 
 ---
 
+## 📋 Prerequisites & Precautions
+
+Before installing NuxView, please take the following steps to ensure a smooth setup:
+
+### Required Tools
+- **curl**: Required to run the one-line installer.
+- **git**: Required for the installer to fetch the latest code.
+- **python3 & venv**: The backend runs on Python. Ensure `python3-venv` is installed (`sudo apt install python3-venv`).
+
+### Precautions
+- **Check Port**: NuxView defaults to port **4897**. Ensure this port is open and not in use.
+- **Existing Instance**: If you're updating, it's best to run `nuxview stop` before running the installer again.
+- **Permissions**: The installer works fine for standard users (installs to `~/.nuxview`). Only use `sudo` if you explicitly want a system-wide installation.
+
+---
+
 ## 🚀 Installation
 
 ### One-Line Installer (Recommended)
