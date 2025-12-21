@@ -16,6 +16,29 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, visible, path, o
     const [details, setDetails] = useState<NodeDetails | null>(null);
     const [viewerMode, setViewerMode] = useState<'permissions' | 'metadata' | null>(null);
 
+    const [coords, setCoords] = useState({ x, y });
+
+    useEffect(() => {
+        // Boundary Check logic
+        if (visible && menuRef.current) {
+            const rect = menuRef.current.getBoundingClientRect();
+            let newX = x;
+            let newY = y;
+
+            // Check Right edge
+            if (x + rect.width > window.innerWidth) {
+                newX = window.innerWidth - rect.width - 8;
+            }
+
+            // Check Bottom edge
+            if (y + rect.height > window.innerHeight) {
+                newY = window.innerHeight - rect.height - 8;
+            }
+
+            setCoords({ x: newX, y: newY });
+        }
+    }, [x, y, visible]);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -24,9 +47,11 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, visible, path, o
         };
         if (visible) {
             document.addEventListener('click', handleClickOutside);
+            document.addEventListener('scroll', onClose, true); // Close on scroll
         }
         return () => {
             document.removeEventListener('click', handleClickOutside);
+            document.removeEventListener('scroll', onClose, true);
         };
     }, [visible, onClose]);
 
@@ -162,8 +187,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, visible, path, o
             ref={menuRef}
             style={{
                 position: 'fixed',
-                top: y,
-                left: x,
+                top: coords.y,
+                left: coords.x,
                 zIndex: 9999,
                 background: 'var(--card-bg)', // Using theme vars
                 border: '1px solid var(--border-color)',

@@ -19,6 +19,9 @@ function App() {
   const [currentView, setCurrentView] = useState<'home' | 'about'>('home');
   const [mobileTab, setMobileTab] = useState<'explorer' | 'graph'>('explorer');
 
+  const [sidePanelWidth, setSidePanelWidth] = useState(320);
+  const isResizing = useRef(false);
+
   // Context Menu State
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, visible: boolean, path: string }>({
     x: 0, y: 0, visible: false, path: ''
@@ -70,9 +73,37 @@ function App() {
     // Initial load
     loadCache();
     checkScanningStatus();
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      setSidePanelWidth(prev => {
+        const newWidth = e.clientX;
+        if (newWidth < 200) return 200;
+        if (newWidth > 600) return 600;
+        return newWidth;
+      });
+    };
+
+    const handleMouseUp = () => {
+      isResizing.current = false;
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
     return () => {
       if (pollTimer.current) window.clearInterval(pollTimer.current);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     }
+  }, []);
+
+  const startResizing = useCallback(() => {
+    isResizing.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none'; // Prevent text selection
   }, []);
 
   const handleFullScan = async () => {
@@ -150,7 +181,15 @@ function App() {
       {/* Main Content Grid */}
       {/* Main Content Grid */}
       {currentView === 'home' ? (
-        <div className="content-grid" style={{ opacity: isScanning ? 0.3 : 1, transition: 'opacity 0.5s' }}>
+        <div
+          className="content-grid"
+          style={{
+            opacity: isScanning ? 0.3 : 1,
+            transition: 'opacity 0.5s',
+            // Dynamic grid columns override for desktop
+            gridTemplateColumns: window.innerWidth > 768 ? `${sidePanelWidth}px 4px 1fr` : '1fr'
+          }}
+        >
 
           {/* Mobile Tab Switcher */}
           <div className="mobile-only mobile-tab-bar">
@@ -174,6 +213,24 @@ function App() {
             ) : (
               <div style={{ padding: '16px', opacity: 0.5, fontSize: '0.8rem' }}>No data loaded to explorer.</div>
             )}
+          </div>
+
+          {/* Resizer Handle (Desktop Only) */}
+          <div
+            className="resizer hide-on-mobile"
+            onMouseDown={startResizing}
+            style={{
+              width: '4px',
+              background: 'transparent',
+              cursor: 'col-resize',
+              zIndex: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%' // Ensure full height
+            }}
+          >
+            <div style={{ width: '1px', height: '32px', background: 'var(--border-color)' }} />
           </div>
 
           <div className={`frame ${mobileTab === 'explorer' ? 'mobile-hidden' : ''}`} style={{ position: 'relative' }}>
