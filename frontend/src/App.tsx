@@ -5,6 +5,7 @@ import { VisualTree } from './components/VisualTree';
 import { SidePanel } from './components/SidePanel';
 import { ContextMenu } from './components/ContextMenu';
 import { NavBar } from './components/NavBar';
+import About from './components/About';
 import { RefreshCcw } from 'lucide-react';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<'home' | 'about'>('home');
 
   // Context Menu State
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, visible: boolean, path: string }>({
@@ -137,6 +139,7 @@ function App() {
         onQuickScan={quickScan}
         onFullScan={handleFullScan}
         lastSynced={lastSynced}
+        onNavigate={setCurrentView}
       />
 
       {error && (
@@ -144,26 +147,33 @@ function App() {
       )}
 
       {/* Main Content Grid */}
-      <div className="content-grid" style={{ opacity: isScanning ? 0.3 : 1, transition: 'opacity 0.5s' }}>
-        <div className="frame">
-          {tree ? (
-            <SidePanel data={tree} selectedPath={selectedPath} onSelect={handleSelect} onContextMenu={handleContextMenu} />
-          ) : (
-            <div style={{ padding: '16px', opacity: 0.5, fontSize: '0.8rem' }}>No data loaded to explorer.</div>
-          )}
-        </div>
+      {/* Main Content Grid */}
+      {currentView === 'home' ? (
+        <div className="content-grid" style={{ opacity: isScanning ? 0.3 : 1, transition: 'opacity 0.5s' }}>
+          <div className="frame">
+            {tree ? (
+              <SidePanel data={tree} selectedPath={selectedPath} onSelect={handleSelect} onContextMenu={handleContextMenu} />
+            ) : (
+              <div style={{ padding: '16px', opacity: 0.5, fontSize: '0.8rem' }}>No data loaded to explorer.</div>
+            )}
+          </div>
 
-        <div className="frame" style={{ position: 'relative' }}>
-          {tree ? (
-            <VisualTree data={tree} selectedPath={selectedPath} onSelect={handleSelect} onContextMenu={handleContextMenu} />
-          ) : (
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
-              <p>No system data loaded.</p>
-              <button className="btn-modern" onClick={handleFullScan} style={{ marginTop: '1rem' }}>Run First Scan</button>
-            </div>
-          )}
+          <div className="frame" style={{ position: 'relative' }}>
+            {tree ? (
+              <VisualTree data={tree} selectedPath={selectedPath} onSelect={handleSelect} onContextMenu={handleContextMenu} />
+            ) : (
+              <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+                <p>No system data loaded.</p>
+                <button className="btn-modern" onClick={handleFullScan} style={{ marginTop: '1rem' }}>Run First Scan</button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="frame" style={{ flex: 1, margin: '16px', overflow: 'hidden' }}>
+          <About />
+        </div>
+      )}
 
 
 

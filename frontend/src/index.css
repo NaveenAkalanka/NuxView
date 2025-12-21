@@ -196,3 +196,152 @@ body {
 .react-flow__controls-button:last-child {
   border-bottom: none !important;
 }
+
+/* About Page Styles */
+.about-container {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  background: var(--bg-color);
+  padding-bottom: 5rem;
+}
+
+.about-content {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 5rem;
+}
+
+.about-hero {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* Matches frame border */
+  border-radius: 20px;
+  padding: 2.5rem;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 1s ease-out forwards;
+}
+
+.about-title-gradient {
+  background: linear-gradient(to right, #b0b0b0, #ffffff, #b0b0b0);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-size: 2.5rem;
+  font-weight: 300;
+  margin-bottom: 1.5rem;
+}
+
+.about-text-lead {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  opacity: 0.9;
+  line-height: 1.6;
+  font-weight: 300;
+  margin-bottom: 1rem;
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.about-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.about-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  transform: translateY(-5px);
+}
+
+.about-card-icon {
+  font-size: 3rem;
+  margin-bottom: 1.5rem;
+  transition: transform 0.3s;
+}
+
+.about-card:hover .about-card-icon {
+  transform: scale(1.1);
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.social-btn.github {
+  background: rgba(36, 41, 46, 0.8);
+  color: white;
+}
+
+.social-btn.github:hover {
+  background: #24292e;
+  transform: scale(1.05);
+}
+
+.social-btn.linkedin {
+  background: rgba(0, 119, 181, 0.8);
+  color: white;
+}
+
+.social-btn.linkedin:hover {
+  background: #0077b5;
+  transform: scale(1.05);
+}
+
+.support-section {
+  background: linear-gradient(135deg, rgba(255, 221, 0, 0.05), rgba(255, 140, 0, 0.05));
+  border: 1px solid rgba(255, 221, 0, 0.1);
+  border-radius: 24px;
+  padding: 3rem;
+  text-align: center;
+}
+
+.coffee-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #FFDD00;
+  color: black;
+  font-weight: 700;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  text-decoration: none;
+  margin-top: 1.5rem;
+  transition: all 0.3s;
+}
+
+.coffee-btn:hover {
+  background: #e6c700;
+  transform: scale(1.05);
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

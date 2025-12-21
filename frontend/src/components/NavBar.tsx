@@ -7,15 +7,16 @@ interface NavBarProps {
     onQuickScan: () => void;
     onFullScan: () => void;
     lastSynced: string | null;
+    onNavigate: (view: 'home' | 'about') => void;
 }
 
-export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuickScan, onFullScan, lastSynced }) => {
+export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuickScan, onFullScan, lastSynced, onNavigate }) => {
     return (
         <div className="nav-area frame" style={{ flexDirection: 'row', alignItems: 'center', padding: '0 16px', justifyContent: 'space-between' }}>
             {/* Branding */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <img src="/NuxView.svg" alt="NuxView" style={{ width: '32px', height: '32px' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => onNavigate('home')}>
+                    <img src="/NuxView.svg" alt="NuxView" style={{ width: '32px', height: '32px', filter: 'brightness(0) invert(1)' }} />
                     <div>
                         <h1 style={{
                             fontSize: '1.2rem',
@@ -36,7 +37,7 @@ export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuick
 
                 <div style={{ width: '1px', height: '24px', background: 'var(--frame-border)' }} />
 
-                <button className="btn-icon" title="About Page" onClick={() => alert("About NuxView v2.0\nDeveloper: Naveen\nBuilt with React Flow & FastAPI")}>
+                <button className="btn-icon" title="About Page" onClick={() => onNavigate('about')}>
                     <Info size={18} />
                 </button>
             </div>
