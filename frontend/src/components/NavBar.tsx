@@ -12,7 +12,7 @@ interface NavBarProps {
 
 export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuickScan, onFullScan, lastSynced, onNavigate }) => {
     return (
-        <div className="nav-area frame" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="nav-area frame" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px' }}>
             {/* Branding */}
             <div className="nav-branding">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => onNavigate('home')}>

@@ -201,7 +201,16 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, visible, path, o
                 gap: '2px'
             }}
         >
-            <div style={{ padding: '8px 12px', fontSize: '0.8rem', opacity: 0.5, borderBottom: '1px solid var(--border-color)', marginBottom: '4px' }}>
+            <div style={{
+                padding: '8px 12px',
+                fontSize: '0.8rem',
+                opacity: 0.5,
+                borderBottom: '1px solid var(--border-color)',
+                marginBottom: '4px',
+                whiteSpace: 'normal',
+                wordBreak: 'break-all',
+                maxWidth: '300px'
+            }}>
                 {path}
             </div>
 

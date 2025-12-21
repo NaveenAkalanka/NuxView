@@ -150,6 +150,7 @@ export const SidePanel: React.FC<{
             height: '100%',
             background: 'var(--card-bg)',
             overflowY: 'auto',
+            overflowX: 'auto',
             padding: '1rem',
             display: 'flex',
             flexDirection: 'column'
