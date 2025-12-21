@@ -47,57 +47,67 @@ const About: React.FC = () => {
             {showFeedback && (
                 <div style={{
                     position: 'fixed', inset: 0, zIndex: 10000,
-                    background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)',
+                    background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }} onClick={() => setShowFeedback(false)}>
-                    <div style={{
-                        background: '#0f172a',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '12px',
-                        padding: '2rem',
+                    <div className="frame" style={{
                         width: '90%',
                         maxWidth: '500px',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                        position: 'relative'
+                        padding: '2rem',
+                        position: 'relative',
+                        background: 'rgba(10, 10, 15, 0.95)', // Slightly darker for modal
+                        borderColor: 'var(--accent-color)', // Highlight border
+                        boxShadow: '0 0 40px rgba(0, 243, 255, 0.15)'
                     }} onClick={e => e.stopPropagation()}>
                         <button
                             onClick={() => setShowFeedback(false)}
-                            style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                            className="btn-icon"
+                            style={{ position: 'absolute', top: '1rem', right: '1rem', border: 'none' }}
                         >
-                            <X size={24} />
+                            <X size={20} />
                         </button>
 
-                        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                            <div style={{ width: '3rem', height: '3rem', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
-                                <MessageSquare size={24} />
+                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                            <div style={{
+                                width: '4rem', height: '4rem',
+                                background: 'rgba(0, 243, 255, 0.1)',
+                                color: 'var(--accent-color)',
+                                borderRadius: '50%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                margin: '0 auto 1rem auto',
+                                border: '1px solid rgba(0, 243, 255, 0.2)'
+                            }}>
+                                <MessageSquare size={28} />
                             </div>
-                            <h3 style={{ fontSize: '1.5rem', color: 'white', margin: 0 }}>Send Feedback</h3>
-                            <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Help me improve NuxView!</p>
+                            <h3 style={{ fontSize: '1.5rem', color: 'white', margin: 0, fontFamily: 'var(--font-main)' }}>Send Feedback</h3>
+                            <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.9rem' }}>
+                                Help us improve <span style={{ color: 'var(--accent-color)' }}>NuxView</span>
+                            </p>
                         </div>
 
-                        <form onSubmit={handleFeedbackSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <form onSubmit={handleFeedbackSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <input type="checkbox" name="botcheck" style={{ display: 'none' }} />
 
                             <div>
-                                <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Name (Optional)</label>
+                                <label style={{ display: 'block', color: 'var(--accent-color)', fontSize: '0.8rem', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Name (Optional)</label>
                                 <input
                                     type="text"
                                     name="name"
                                     className="input-modern"
-                                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white' }}
+                                    style={{ width: '100%', background: 'rgba(0,0,0,0.4)', borderRadius: '4px', border: '1px solid var(--frame-border)', padding: '10px 12px', color: 'white' }}
                                     placeholder="Your name"
                                 />
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Message</label>
+                                <label style={{ display: 'block', color: 'var(--accent-color)', fontSize: '0.8rem', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Message</label>
                                 <textarea
                                     name="message"
                                     required
                                     className="input-modern"
                                     rows={5}
-                                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: 'white', resize: 'vertical' }}
-                                    placeholder="What's on your mind?"
+                                    style={{ width: '100%', background: 'rgba(0,0,0,0.4)', borderRadius: '4px', border: '1px solid var(--frame-border)', padding: '10px 12px', color: 'white', resize: 'vertical', fontFamily: 'var(--font-main)' }}
+                                    placeholder="Bug report, feature request, or just saying hi..."
                                 ></textarea>
                             </div>
 
@@ -105,10 +115,16 @@ const About: React.FC = () => {
                                 type="submit"
                                 disabled={sending}
                                 className="btn-modern"
-                                style={{ justifyContent: 'center', marginTop: '0.5rem', background: '#38bdf8', color: '#000', borderColor: '#38bdf8' }}
+                                style={{
+                                    justifyContent: 'center',
+                                    marginTop: '1rem',
+                                    width: '100%',
+                                    padding: '12px',
+                                    fontSize: '1rem'
+                                }}
                             >
-                                {sending ? <Loader2 size={18} className="spinning" /> : <Send size={18} />}
-                                {sending ? 'Sending...' : 'Send Feedback'}
+                                {sending ? <Loader2 size={20} className="spinning" /> : <Send size={20} />}
+                                {sending ? 'TRANSMITTING...' : 'SEND FEEDBACK'}
                             </button>
                         </form>
                     </div>
