@@ -467,6 +467,16 @@ body {
     max-width: none;
   }
 
+  .nav-system-info {
+    order: 2;
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 8px;
+  }
+
   .nav-branding h1 {
     font-size: 1rem !important;
   }

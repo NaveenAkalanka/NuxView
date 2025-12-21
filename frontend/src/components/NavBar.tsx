@@ -67,7 +67,7 @@ export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuick
             </div>
 
             {/* System Info */}
-            <div className="nav-system-info hide-on-mobile">
+            <div className="nav-system-info">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
                     <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Connected</span>
