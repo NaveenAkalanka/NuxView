@@ -76,7 +76,7 @@ export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuick
                     {lastSynced ? `Synced: ${lastSynced}` : 'Waiting for scan...'}
                 </div>
                 <div style={{ color: 'var(--accent-color)', opacity: 0.8, marginTop: '2px', fontSize: '0.7rem' }}>
-                    DEV: NAVEEN
+                    DEV: NAVEEN AKALANKA
                 </div>
             </div>
         </div>

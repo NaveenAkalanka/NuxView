@@ -21,6 +21,7 @@ const About: React.FC = () => {
                     transition: 'opacity 1s ease-out, transform 1s ease-out'
                 }}>
                     <div className="about-hero">
+                        <img src="/NuxView.svg" alt="NuxView" style={{ width: '80px', height: '80px', marginBottom: '1.5rem', filter: 'brightness(0) invert(1)' }} />
                         <h1 className="about-title-gradient">
                             Visualize Your System
                         </h1>
