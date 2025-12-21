@@ -17,7 +17,7 @@ export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuick
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => onNavigate('home')}>
                     <img src="/NuxView.svg" alt="NuxView" style={{ width: '32px', height: '32px', filter: 'brightness(0) invert(1)' }} />
-                    <div>
+                    <div className="hide-on-mobile">
                         <h1 style={{
                             fontSize: '1.2rem',
                             margin: 0,
@@ -35,7 +35,7 @@ export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuick
                     </div>
                 </div>
 
-                <div style={{ width: '1px', height: '24px', background: 'var(--frame-border)' }} />
+                <div style={{ width: '1px', height: '24px', background: 'var(--frame-border)' }} className="hide-on-mobile" />
 
                 <button className="btn-icon" title="About Page" onClick={() => onNavigate('about')}>
                     <Info size={18} />
@@ -55,19 +55,19 @@ export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuick
                         />
                         <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                     </div>
-                    <button className="btn-icon" onClick={onQuickScan} title="Quick Peek (Depth 1)">
+                    <button className="btn-icon hide-on-mobile" onClick={onQuickScan} title="Quick Peek (Depth 1)">
                         <Terminal size={18} />
                     </button>
                 </div>
 
-                <button className="btn-modern" onClick={onFullScan}>
+                <button className="btn-modern" onClick={onFullScan} style={{ whiteSpace: 'nowrap' }}>
                     <Monitor size={16} />
-                    <span>Full Scan</span>
+                    <span className="hide-on-mobile">Full Scan</span>
                 </button>
             </div>
 
             {/* System Info */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.75rem', gap: '2px' }}>
+            <div className="hide-on-mobile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.75rem', gap: '2px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
                     <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Connected</span>
