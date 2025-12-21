@@ -102,6 +102,10 @@ Once installed, you can manage NuxView using the `nuxview` command:
   ```
 
 ### Advanced Usage
+- **Update NuxView**:
+  ```bash
+  nuxview update
+  ```
 - **Trigger a custom scan**:
   ```bash
   nuxview scan /var/log

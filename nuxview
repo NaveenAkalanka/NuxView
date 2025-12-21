@@ -175,6 +175,12 @@ case "$command" in
         echo "$RESPONSE"
         ;;
         
+    update)
+        echo "Updating NuxView to the latest version..."
+        # We use the remote installer to ensure a fresh, consistent update
+        curl -sL https://raw.githubusercontent.com/NaveenAkalanka/NuxView/main/remote_install.sh | bash
+        ;;
+        
     uninstall)
         echo "Uninstalling NuxView..."
         "$0" stop 2>/dev/null
