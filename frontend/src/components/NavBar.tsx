@@ -12,9 +12,9 @@ interface NavBarProps {
 
 export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuickScan, onFullScan, lastSynced, onNavigate }) => {
     return (
-        <div className="nav-area frame" style={{ flexDirection: 'row', alignItems: 'center', padding: '0 16px', justifyContent: 'space-between' }}>
+        <div className="nav-area frame" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             {/* Branding */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="nav-branding">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => onNavigate('home')}>
                     <img src="/NuxView.svg" alt="NuxView" style={{ width: '32px', height: '32px', filter: 'brightness(0) invert(1)' }} />
                     <div className="hide-on-mobile">
@@ -43,9 +43,9 @@ export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuick
             </div>
 
             {/* Controls */}
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: 1, maxWidth: '600px', justifyContent: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                    <div style={{ position: 'relative', flex: 1 }}>
+            <div className="nav-controls">
+                <div className="nav-controls-inner">
+                    <div className="nav-search-container">
                         <input
                             value={inputPath}
                             onChange={(e) => setInputPath(e.target.value)}
@@ -67,7 +67,7 @@ export const NavBar: React.FC<NavBarProps> = ({ inputPath, setInputPath, onQuick
             </div>
 
             {/* System Info */}
-            <div className="hide-on-mobile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.75rem', gap: '2px' }}>
+            <div className="nav-system-info hide-on-mobile">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
                     <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Connected</span>
