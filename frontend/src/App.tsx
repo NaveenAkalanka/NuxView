@@ -17,6 +17,7 @@ function App() {
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<'home' | 'about'>('home');
+  const [mobileTab, setMobileTab] = useState<'explorer' | 'graph'>('explorer');
 
   // Context Menu State
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, visible: boolean, path: string }>({
@@ -150,7 +151,24 @@ function App() {
       {/* Main Content Grid */}
       {currentView === 'home' ? (
         <div className="content-grid" style={{ opacity: isScanning ? 0.3 : 1, transition: 'opacity 0.5s' }}>
-          <div className="frame">
+
+          {/* Mobile Tab Switcher */}
+          <div className="mobile-only mobile-tab-bar">
+            <button
+              className={`mobile-tab-btn ${mobileTab === 'explorer' ? 'active' : ''}`}
+              onClick={() => setMobileTab('explorer')}
+            >
+              Explorer
+            </button>
+            <button
+              className={`mobile-tab-btn ${mobileTab === 'graph' ? 'active' : ''}`}
+              onClick={() => setMobileTab('graph')}
+            >
+              Graph View
+            </button>
+          </div>
+
+          <div className={`frame ${mobileTab === 'graph' ? 'mobile-hidden' : ''}`}>
             {tree ? (
               <SidePanel data={tree} selectedPath={selectedPath} onSelect={handleSelect} onContextMenu={handleContextMenu} />
             ) : (
@@ -158,7 +176,7 @@ function App() {
             )}
           </div>
 
-          <div className="frame" style={{ position: 'relative' }}>
+          <div className={`frame ${mobileTab === 'explorer' ? 'mobile-hidden' : ''}`} style={{ position: 'relative' }}>
             {tree ? (
               <VisualTree data={tree} selectedPath={selectedPath} onSelect={handleSelect} onContextMenu={handleContextMenu} />
             ) : (

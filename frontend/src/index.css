@@ -395,13 +395,53 @@ body {
     grid-template-rows: auto 1fr;
     padding: 8px;
     gap: 8px;
+    overflow: hidden;
+    /* Prevent body scroll */
   }
 
   .content-grid {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
-    /* Stack: SidePanel then VisualTree */
     gap: 8px;
+    overflow: hidden;
+  }
+
+  /* Mobile Tab Bar */
+  .mobile-tab-bar {
+    display: flex;
+    gap: 8px;
+    padding: 0 4px;
+    margin-bottom: 4px;
+    z-index: 10;
+  }
+
+  .mobile-tab-btn {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mobile-tab-btn.active {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--accent-color);
+    border-color: rgba(16, 185, 129, 0.3);
+    font-weight: 600;
+  }
+
+  .mobile-hidden {
+    display: none !important;
+  }
+
+  /* Ensure frames take full height in tab mode */
+  .content-grid .frame {
+    height: 100%;
+    overflow: hidden;
   }
 
   /* NavBar Mobile */
@@ -411,6 +451,7 @@ body {
     flex-wrap: wrap;
     height: auto !important;
     /* Allow growing */
+    flex-shrink: 0;
   }
 
   .nav-branding {
