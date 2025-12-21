@@ -22,11 +22,9 @@ command="$1"
 shift
 
 ensure_dirs() {
-    if [ ! -d "$DATA_ROOT" ]; then
-        mkdir -p "$DATA_ROOT"
-        mkdir -p "$LOG_DIR"
-        mkdir -p "$DATA_ROOT/data"
-    fi
+    mkdir -p "$DATA_ROOT"
+    mkdir -p "$LOG_DIR"
+    mkdir -p "$DATA_ROOT/data"
 }
 
 ensure_installed() {
