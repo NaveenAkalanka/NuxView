@@ -166,5 +166,5 @@ Designed & Developed by **Naveen Akalanka**.
 </p>
 
 <p align="center">
-  <sub>© 2025 NuxView Project. MIT License.</sub>
+  <sub>© 2025 NuxView Project.</sub>
 </p>
